@@ -1,0 +1,130 @@
+--- upstream/skills/engineering/grill-with-docs/SKILL.md
++++ local/skills/grill-with-docs/SKILL.md
+@@ -1,7 +1,9 @@
+ ---
+ name: grill-with-docs
+ description: A relentless interview to sharpen a plan or design, which also creates docs (ADR's and glossary) as we go.
+-disable-model-invocation: true
+ ---
+ 
+-Run a `/grilling` session, using the `/domain-modeling` skill.
++Run a `$grilling` session, using the `$domain-modeling` skill.
++
++Completion criterion: every material decision is answered, shared understanding
++is natively confirmed, and each resolved term or qualifying ADR is recorded.
+--- upstream/skills/productivity/grilling/SKILL.md
++++ local/skills/grilling/SKILL.md
+@@ -3,10 +3,11 @@
+ description: Grill the user relentlessly about a plan, decision, or idea. Use when the user wants to stress-test their thinking, or uses any 'grill' trigger phrases.
+ ---
+ 
+-Interview me relentlessly about every aspect of this until we reach a shared understanding. Walk down each branch of the decision tree, resolving dependencies between decisions one-by-one. For each question, provide your recommended answer.
+-
+-Ask the questions one at a time, waiting for feedback on each question before continuing. Asking multiple questions at once is bewildering.
++Interview me relentlessly about every aspect of this until we reach a shared understanding. Walk down each branch of the decision tree, resolving dependencies between decisions one-by-one.
+ 
+ If a *fact* can be found by exploring the environment (filesystem, tools, etc.), look it up rather than asking me. The *decisions*, though, are mine — put each one to me and wait for my answer.
+ 
+ Do not act on it until I confirm we have reached a shared understanding.
++
++For every user question, follow [`NATIVE-INPUT.md`](NATIVE-INPUT.md).
++Completion requires its native alignment gate to pass.
+--- upstream/skills/engineering/domain-modeling/SKILL.md
++++ local/skills/domain-modeling/SKILL.md
+@@ -7,47 +7,27 @@
+ 
+ Actively build and sharpen the project's domain model as you design. This is the *active* discipline — challenging terms, inventing edge-case scenarios, and writing the glossary and decisions down the moment they crystallise. (Merely *reading* `CONTEXT.md` for vocabulary is not this skill — that's a one-line habit any skill can do. This skill is for when you're changing the model, not just consuming it.)
+ 
+-## File structure
+-
+-Most repos have a single context:
+-
+-```
+-/
+-├── CONTEXT.md
+-├── docs/
+-│   └── adr/
+-│       ├── 0001-event-sourced-orders.md
+-│       └── 0002-postgres-for-write-model.md
+-└── src/
+-```
+-
+-If a `CONTEXT-MAP.md` exists at the root, the repo has multiple contexts. The map points to where each one lives:
+-
+-```
+-/
+-├── CONTEXT-MAP.md
+-├── docs/
+-│   └── adr/                          ← system-wide decisions
+-├── src/
+-│   ├── ordering/
+-│   │   ├── CONTEXT.md
+-│   │   └── docs/adr/                 ← context-specific decisions
+-│   └── billing/
+-│       ├── CONTEXT.md
+-│       └── docs/adr/
+-```
+-
+-Create files lazily — only when you have something to write. If no `CONTEXT.md` exists, create one when the first term is resolved. If no `docs/adr/` exists, create it when the first ADR is needed.
++Before the first glossary write, read [`CONTEXT-FORMAT.md`](CONTEXT-FORMAT.md)
++for file placement, single/multi-context routing, and format. Create files only
++when the first resolved term needs them.
++
++Before asking the user to decide anything, read
++[`../grilling/NATIVE-INPUT.md`](../grilling/NATIVE-INPUT.md) and use that native
++input contract. This applies whether this skill runs alone or through another
++skill; never substitute a prose question.
+ 
+ ## During the session
+ 
+ ### Challenge against the glossary
+ 
+-When the user uses a term that conflicts with the existing language in `CONTEXT.md`, call it out immediately. "Your glossary defines 'cancellation' as X, but you seem to mean Y — which is it?"
++When the user uses a term that conflicts with the existing language in
++`CONTEXT.md`, surface the conflict immediately and present the viable meanings
++as one native decision.
+ 
+ ### Sharpen fuzzy language
+ 
+-When the user uses vague or overloaded terms, propose a precise canonical term. "You're saying 'account' — do you mean the Customer or the User? Those are different things."
++When the user uses vague or overloaded terms, propose a precise canonical term
++and present the materially distinct meanings as one native decision.
+ 
+ ### Discuss concrete scenarios
+ 
+@@ -55,7 +35,9 @@
+ 
+ ### Cross-reference with code
+ 
+-When the user states how something works, check whether the code agrees. If you find a contradiction, surface it: "Your code cancels entire Orders, but you just said partial cancellation is possible — which is right?"
++When the user states how something works, check whether the code agrees. If you
++find a contradiction, surface the evidence and present the viable resolutions
++as one native decision.
+ 
+ ### Update CONTEXT.md inline
+ 
+@@ -65,10 +47,9 @@
+ 
+ ### Offer ADRs sparingly
+ 
+-Only offer to create an ADR when all three are true:
+-
+-1. **Hard to reverse** — the cost of changing your mind later is meaningful
+-2. **Surprising without context** — a future reader will wonder "why did they do it this way?"
+-3. **The result of a real trade-off** — there were genuine alternatives and you picked one for specific reasons
++When a candidate durable decision arises, read
++[`ADR-FORMAT.md`](ADR-FORMAT.md) and create an ADR only when its three-part gate
++passes.
+ 
+-If any of the three is missing, skip the ADR. Use the format in [ADR-FORMAT.md](./ADR-FORMAT.md).
++Completion criterion: every resolved domain term is recorded once, code/docs
++contradictions are surfaced, and only qualifying decisions become ADRs.
+--- upstream/skills/engineering/domain-modeling/CONTEXT-FORMAT.md
++++ local/skills/domain-modeling/CONTEXT-FORMAT.md
+@@ -57,4 +57,5 @@
+ - If only a root `CONTEXT.md` exists, single context
+ - If neither exists, create a root `CONTEXT.md` lazily when the first term is resolved
+ 
+-When multiple contexts exist, infer which one the current topic relates to. If unclear, ask.
++When multiple contexts exist, infer which one the current topic relates to. If
++unclear, resolve it with the native input contract linked from `SKILL.md`.

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Prompt Master for GPT-5.6"
+  short_description: "Craft lean GPT-5.6-ready prompts"
+  default_prompt: "Use $prompt-master-gpt5 to turn my rough request into a lean, outcome-focused GPT-5.6 prompt."
