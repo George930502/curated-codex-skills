@@ -51,7 +51,20 @@ Set-Location .\prompt-review-and-dispatch
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\install.ps1
 ```
 
-Restart Codex, then invoke `$prompt-review-and-dispatch`.
+### Enable native input on Windows
+
+The workflow requires Codex's native `request_user_input` control. In
+PowerShell, verify and persistently enable it before starting a new Codex task:
+
+```powershell
+codex features list | Select-String "default_mode_request_user_input"
+codex features enable default_mode_request_user_input
+codex features list | Select-String "default_mode_request_user_input"
+```
+
+The final line must end in `true`. Fully close Codex, start a new session, then
+invoke `$prompt-review-and-dispatch`. If the feature remains `false` or is not
+listed, see [Windows native-input troubleshooting](docs/windows-native-input.md).
 
 The final invocation must run inside a configured and authenticated Codex
 session. Installing the skills does not provide Codex credentials; an
