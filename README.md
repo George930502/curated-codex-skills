@@ -29,9 +29,11 @@ The installers target Codex's documented user skill directory,
 `$HOME/.agents/skills` (`%USERPROFILE%\.agents\skills` on Windows).
 
 The repository exercises installation and validation on GitHub-hosted Linux,
-macOS, and Windows runners. WSL and Git Bash use the shell installer and have
-also been exercised manually. Native approval additionally depends on the
-Codex host exposing `request_user_input`; Windows setup is documented in
+macOS, and Windows runners. WSL and Git Bash use the same shell installer, but
+their prior manual exercise has no retained artifact; `v0.1.0` therefore makes
+no independently auditable compatibility claim for those two surfaces. Native
+approval additionally depends on the Codex host exposing `request_user_input`;
+Windows setup is documented in
 [`docs/windows-native-input.md`](docs/windows-native-input.md).
 The evidence and limits for each surface are recorded in the
 [`compatibility matrix`](docs/compatibility.md).

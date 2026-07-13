@@ -6,7 +6,8 @@ collection while preserving the five existing skill identities and provenance.
 Starting evidence supplied for this release records successful installation on
 Windows, macOS, Linux, WSL, and Git Bash. Automated release-candidate evidence
 must independently exercise Linux, macOS, and Windows; WSL and Git Bash remain
-manual evidence and must not be presented as CI coverage.
+an unretained manual report and must not be presented as CI coverage or an
+independently auditable compatibility guarantee.
 
 Acceptance requires:
 
