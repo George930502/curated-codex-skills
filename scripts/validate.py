@@ -34,6 +34,16 @@ def parse_scalar(raw: str, source: Path, number: int) -> str | bool:
         return value == "true"
     if value[0] in "'\"" or value[-1] in "'\"":
         raise ValueError(f"{source}:{number}: invalid quoted string")
+    if (
+        value[0] in "[]{}&*!|>@`%"
+        or value in ("null", "Null", "NULL", "~")
+        or re.fullmatch(r"[-+]?(?:\d[\d_]*)(?:\.\d[\d_]*)?", value)
+        or " #" in value
+        or ": " in value
+    ):
+        raise ValueError(
+            f"{source}:{number}: unsupported plain scalar; quote string values"
+        )
     return value
 
 

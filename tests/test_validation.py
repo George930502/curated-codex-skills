@@ -62,6 +62,13 @@ class ValidationTests(unittest.TestCase):
             "invalid quoted string",
         )
 
+    def test_malformed_plain_scalar_is_rejected(self) -> None:
+        self.assert_skill_error(
+            "bad-plain-scalar",
+            "---\nname: bad-plain-scalar\ndescription: [unterminated\n---\n",
+            "unsupported plain scalar",
+        )
+
     def test_disable_model_invocation_must_be_boolean(self) -> None:
         self.assert_skill_error(
             "bad-policy",
