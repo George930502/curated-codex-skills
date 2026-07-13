@@ -3,6 +3,24 @@
 Reviewed 2026-07-14. GitHub repository contents, not mirrors or derivative
 articles, are the source of truth.
 
+## Repository maintenance guidance
+
+The production baseline follows these primary sources, proportionate to this
+small instruction-and-installer repository:
+
+- [OpenAI: Build skills](https://learn.chatgpt.com/docs/build-skills.md) for
+  skill structure, progressive disclosure, optional UI metadata, and documented
+  repository/user install locations.
+- [GitHub: Community profiles](https://docs.github.com/en/communities/setting-up-your-project-for-healthy-contributions/about-community-profiles-for-public-repositories)
+  for public contribution, support, conduct, license, and security files.
+- [GitHub Actions secure use](https://docs.github.com/en/actions/reference/security/secure-use)
+  for least-privilege tokens, immutable action references, and dependency
+  visibility.
+- [GitHub rulesets](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/available-rules-for-rulesets)
+  for required status checks and protected default-branch behavior.
+- [OpenSSF OSPS Baseline 2026.02.19](https://baseline.openssf.org/versions/2026-02-19.html)
+  for risk-based access, build, release, vulnerability, and governance controls.
+
 ## Matt Pocock skills
 
 - Repository: https://github.com/mattpocock/skills

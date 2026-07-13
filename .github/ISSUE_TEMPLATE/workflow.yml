@@ -1,0 +1,26 @@
+name: Skill or workflow proposal
+description: Propose a reusable Codex workflow or a material catalog improvement.
+title: "[Proposal]: "
+labels: [enhancement, needs-triage]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Repeatable problem
+      description: Who encounters it, and why is a reusable skill the right surface?
+    validations:
+      required: true
+  - type: textarea
+    id: contract
+    attributes:
+      label: Proposed workflow contract
+      description: Describe triggers, inputs, decisions, completion, and failure behavior.
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Sources and validation
+      description: List upstream sources, licensing, and deterministic checks that could support it.
+    validations:
+      required: true

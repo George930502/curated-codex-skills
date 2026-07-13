@@ -3,7 +3,7 @@ set -euo pipefail
 
 script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 repo_root=$(CDPATH= cd -- "$script_dir/.." && pwd)
-destination="$HOME/.agents/skills"
+destination=${SKILLS_INSTALL_DIR:-"$HOME/.agents/skills"}
 
 mkdir -p "$destination"
 cp -R "$repo_root/skills"/. "$destination"/

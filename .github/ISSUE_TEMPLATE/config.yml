@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Usage questions and ideas
+    url: https://github.com/George930502/curated-codex-skills/discussions
+    about: Ask for help or discuss a workflow before proposing a change.
+  - name: Private security report
+    url: https://github.com/George930502/curated-codex-skills/security/advisories/new
+    about: Report vulnerabilities without exposing details publicly.

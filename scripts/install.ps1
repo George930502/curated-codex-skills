@@ -1,11 +1,13 @@
 [CmdletBinding()]
-param()
+param(
+    [string]$Destination = (Join-Path (Join-Path $HOME '.agents') 'skills')
+)
 
 $ErrorActionPreference = 'Stop'
 
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 $source = Join-Path $repoRoot 'skills'
-$destination = Join-Path (Join-Path $HOME '.agents') 'skills'
+$destination = $Destination
 
 New-Item -ItemType Directory -Force -Path $destination | Out-Null
 

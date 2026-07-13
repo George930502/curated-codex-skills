@@ -1,102 +1,96 @@
-# Prompt Review and Dispatch
+# Curated Codex Skills
 
-Codex skills that audit and polish GPT-5.6 prompts, clarify purpose through
-native choices, require explicit approval, then queue the approved prompt into
-the verified Codex task.
+A curated, production-tested collection of reusable Codex skills and workflows.
+Each skill is selected for a concrete workflow, kept auditable to its sources,
+and exercised through the platforms on which its behavior differs.
 
-## Skills
+> **Preview:** `v0.1.0` establishes the maintenance contract and publishes the
+> first five skills. Interfaces may evolve before `v1.0.0`; changes are tracked
+> in the [changelog](CHANGELOG.md).
 
-- `prompt-master-gpt5` — audit or polish a GPT-5.6 prompt.
-- `prompt-review-and-dispatch` — clarify, polish, approve, and dispatch.
-- `grill-with-docs` — Matt Pocock's grilling/domain-modeling composition.
-- `grilling` — one-decision-at-a-time interviewing with native Codex input.
-- `domain-modeling` — maintain project language and durable decisions.
+## Catalog
 
-The authoritative native-input contract is
-`skills/grilling/NATIVE-INPUT.md`. GPT-5.6 facts live only in
-`skills/prompt-master-gpt5/references/openai-gpt56-prompting.md`.
-
-Per the product contract, every incomplete prompt review invokes
-`grill-with-docs`, not bare `grilling`. Its domain-modeling branch writes only
-when an actual term is resolved or a candidate decision passes the ADR gate.
-
-## Evidence
+| Skill | Purpose | Origin |
+|---|---|---|
+| `prompt-review-and-dispatch` | Clarify, polish, approve, and dispatch a prompt into a verified Codex task. | Original composition |
+| `prompt-master-gpt5` | Audit or produce a lean GPT-5.6 prompt. | Distilled from `nidhinjs/prompt-master` plus OpenAI guidance |
+| `grill-with-docs` | Stress-test plans while maintaining domain language and decisions. | Adapted from `mattpocock/skills` |
+| `grilling` | Resolve decisions one native Codex question at a time. | Adapted from `mattpocock/skills` |
+| `domain-modeling` | Maintain project language and durable decisions. | Adapted from `mattpocock/skills` |
 
 [`SOURCES.md`](SOURCES.md) pins every upstream commit, source path, hash, and
-local adaptation. [`AUTHORING-AUDIT.md`](AUTHORING-AUDIT.md) records the invoked
-skill standards and resulting checks. The repository is MIT licensed;
-third-party notices are in [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md).
+adaptation. [`AUTHORING-AUDIT.md`](AUTHORING-AUDIT.md) records the authoring
+standards used. MIT notices are preserved in
+[`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md).
+
+## Compatibility
+
+The installers target Codex's documented user skill directory,
+`$HOME/.agents/skills` (`%USERPROFILE%\.agents\skills` on Windows).
+
+The repository exercises installation and validation on GitHub-hosted Linux,
+macOS, and Windows runners. WSL and Git Bash use the shell installer and have
+also been exercised manually. Native approval additionally depends on the
+Codex host exposing `request_user_input`; Windows setup is documented in
+[`docs/windows-native-input.md`](docs/windows-native-input.md).
+
+The skills require an interactive, authenticated Codex surface. They do not
+bundle credentials, enable experimental features silently, or claim support
+for non-Codex agents.
 
 ## Install
 
-Clone the repository, enter it, then run the installer for your shell. The
-installers copy every skill into the
-[official user-level directory](https://learn.chatgpt.com/docs/build-skills.md#where-to-save-skills),
-`$HOME/.agents/skills`, without requiring `rsync`. On Windows this resolves to
-`%USERPROFILE%\.agents\skills`.
-
-### macOS/Linux, WSL, or Git Bash
+### macOS, Linux, WSL, or Git Bash
 
 ```bash
-git clone https://github.com/George930502/prompt-review-and-dispatch.git
-cd prompt-review-and-dispatch
+git clone https://github.com/George930502/curated-codex-skills.git
+cd curated-codex-skills
 bash scripts/install.sh
 ```
 
 ### Windows PowerShell
 
 ```powershell
-git clone https://github.com/George930502/prompt-review-and-dispatch.git
-Set-Location .\prompt-review-and-dispatch
+git clone https://github.com/George930502/curated-codex-skills.git
+Set-Location .\curated-codex-skills
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\install.ps1
 ```
 
-### Enable native input on Windows
+The installers copy all catalog skills and report whether
+`default_mode_request_user_input` is available and enabled. They do not change
+Codex configuration. To test an install without touching your real home, use:
 
-The workflow requires Codex's native `request_user_input` control. In
-PowerShell, verify and persistently enable it before starting a new Codex task:
-
-```powershell
-codex features list | Select-String "default_mode_request_user_input"
-codex features enable default_mode_request_user_input
-codex features list | Select-String "default_mode_request_user_input"
+```bash
+SKILLS_INSTALL_DIR="$(mktemp -d)/skills" bash scripts/install.sh
 ```
 
-The final line must end in `true`. Fully close Codex, start a new session, then
-invoke `$prompt-review-and-dispatch`. If the feature remains `false` or is not
-listed, see [Windows native-input troubleshooting](docs/windows-native-input.md).
-
-The final invocation must run inside a configured and authenticated Codex
-session. Installing the skills does not provide Codex credentials; an
-isolated `codex exec` without authentication will return `401 Unauthorized`.
+```powershell
+$target = Join-Path ([System.IO.Path]::GetTempPath()) ([guid]::NewGuid())
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\install.ps1 -Destination $target
+```
 
 ## Validate
 
-The validator uses the current Python interpreter and forces UTF-8 mode, so it
-does not depend on the Windows system code page. Install its `PyYAML`
-dependency once before running it.
-
-### macOS/Linux, WSL, or Git Bash
+Validation is self-contained and uses only the Python standard library:
 
 ```bash
-python3 -m pip install -r scripts/requirements-validation.txt
-python3 scripts/validate.py
+python3 scripts/validate.py --skills-dir skills
+python3 scripts/check_repository.py
+python3 -m unittest discover -s tests -v
 ```
 
-### Windows PowerShell
+On Windows, replace `python3` with `py -3`. These are the same repository checks
+run by CI. Installer smoke tests always use temporary destinations; see
+[`CONTRIBUTING.md`](CONTRIBUTING.md) for the full contribution gate.
 
-```powershell
-py -3 -m pip install -r .\scripts\requirements-validation.txt
-py -3 .\scripts\validate.py
-```
+## Project contract
 
-The command validates the installed copy in `$HOME/.agents/skills`. It uses the
-Codex system validator at
-`${CODEX_HOME:-$HOME/.codex}/skills/.system/skill-creator/scripts/quick_validate.py`.
-To validate the checkout before installing, append `--skills-dir skills`.
+- [Contributing](CONTRIBUTING.md) — change flow, skill admission, and checks
+- [Security](SECURITY.md) — private vulnerability reporting and scope
+- [Support](SUPPORT.md) — questions, defects, and native-input diagnostics
+- [Governance](GOVERNANCE.md) — maintainership and decision policy
+- [Roadmap](ROADMAP.md) — addition criteria and near-term direction
+- [Releases](docs/releasing.md) — versioning and release procedure
+- [Code of Conduct](CODE_OF_CONDUCT.md)
 
-Codex still recognizes skills installed by its bundled installer under
-`$CODEX_HOME/skills`, but this repository uses the current documented global
-authoring location to avoid platform-specific destinations. Remove older copies
-of these same five skills from `$CODEX_HOME/skills` after verifying the new
-installation, otherwise duplicate names can appear in the skill selector.
+This project is licensed under the [MIT License](LICENSE).
