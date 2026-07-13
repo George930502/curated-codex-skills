@@ -128,6 +128,10 @@ def validate_skill(skill: Path) -> list[str]:
     name = metadata.get("name")
     if not isinstance(name, str) or name != skill.name:
         errors.append(f"{skill_file}: name must match directory {skill.name!r}")
+    elif len(name) > 64 or not re.fullmatch(r"[a-z0-9]+(?:-[a-z0-9]+)*", name):
+        errors.append(
+            f"{skill_file}: name must be lowercase kebab-case and at most 64 characters"
+        )
     description = metadata.get("description")
     if not isinstance(description, str) or not description.strip():
         errors.append(f"{skill_file}: description is required")

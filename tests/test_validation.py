@@ -14,50 +14,60 @@ SPEC.loader.exec_module(validate)
 
 
 class ValidationTests(unittest.TestCase):
+    def assert_skill_error(self, name: str, skill_file: str, expected: str) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            skill = Path(temporary) / name
+            skill.mkdir()
+            (skill / "SKILL.md").write_text(skill_file, encoding="utf-8")
+            self.assertTrue(
+                any(expected in error for error in validate.validate_skill(skill))
+            )
+
     def test_all_packaged_skills_are_valid(self) -> None:
         skills = sorted((ROOT / "skills").iterdir())
         failures = [error for skill in skills if skill.is_dir() for error in validate.validate_skill(skill)]
         self.assertEqual([], failures)
 
     def test_directory_name_must_match_skill_name(self) -> None:
-        with tempfile.TemporaryDirectory() as temporary:
-            skill = Path(temporary) / "wrong-name"
-            skill.mkdir()
-            (skill / "SKILL.md").write_text(
-                "---\nname: actual-name\ndescription: A useful skill.\n---\n",
-                encoding="utf-8",
-            )
-            self.assertTrue(any("name must match" in error for error in validate.validate_skill(skill)))
+        self.assert_skill_error(
+            "wrong-name",
+            "---\nname: actual-name\ndescription: A useful skill.\n---\n",
+            "name must match",
+        )
+
+    def test_skill_name_must_be_bounded_lowercase_kebab_case(self) -> None:
+        self.assert_skill_error(
+            "Bad--Name",
+            "---\nname: Bad--Name\ndescription: A useful skill.\n---\n",
+            "lowercase kebab-case",
+        )
+        long_name = "a" * 65
+        self.assert_skill_error(
+            long_name,
+            f"---\nname: {long_name}\ndescription: A useful skill.\n---\n",
+            "at most 64 characters",
+        )
 
     def test_description_is_required(self) -> None:
-        with tempfile.TemporaryDirectory() as temporary:
-            skill = Path(temporary) / "missing-description"
-            skill.mkdir()
-            (skill / "SKILL.md").write_text(
-                "---\nname: missing-description\ndescription: \"\"\n---\n",
-                encoding="utf-8",
-            )
-            self.assertTrue(any("description is required" in error for error in validate.validate_skill(skill)))
+        self.assert_skill_error(
+            "missing-description",
+            '---\nname: missing-description\ndescription: ""\n---\n',
+            "description is required",
+        )
 
     def test_unterminated_quoted_description_is_rejected(self) -> None:
-        with tempfile.TemporaryDirectory() as temporary:
-            skill = Path(temporary) / "bad-quote"
-            skill.mkdir()
-            (skill / "SKILL.md").write_text(
-                '---\nname: bad-quote\ndescription: "unterminated\n---\n',
-                encoding="utf-8",
-            )
-            self.assertTrue(any("invalid quoted string" in error for error in validate.validate_skill(skill)))
+        self.assert_skill_error(
+            "bad-quote",
+            '---\nname: bad-quote\ndescription: "unterminated\n---\n',
+            "invalid quoted string",
+        )
 
     def test_disable_model_invocation_must_be_boolean(self) -> None:
-        with tempfile.TemporaryDirectory() as temporary:
-            skill = Path(temporary) / "bad-policy"
-            skill.mkdir()
-            (skill / "SKILL.md").write_text(
-                "---\nname: bad-policy\ndescription: Test.\ndisable-model-invocation: banana\n---\n",
-                encoding="utf-8",
-            )
-            self.assertTrue(any("must be a boolean" in error for error in validate.validate_skill(skill)))
+        self.assert_skill_error(
+            "bad-policy",
+            "---\nname: bad-policy\ndescription: Test.\ndisable-model-invocation: banana\n---\n",
+            "must be a boolean",
+        )
 
     def test_interface_fields_cannot_live_under_another_mapping(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
