@@ -9,6 +9,24 @@ import subprocess
 import sys
 
 
+def require_pyyaml(repo_root: Path) -> bool:
+    try:
+        __import__("yaml")
+        return True
+    except ModuleNotFoundError as error:
+        if error.name != "yaml":
+            raise
+
+    requirements = repo_root / "scripts" / "requirements-validation.txt"
+    launcher = "py -3" if os.name == "nt" else f'"{sys.executable}"'
+    print("Missing validation dependency: PyYAML.", file=sys.stderr)
+    print(
+        f'Install it with: {launcher} -m pip install -r "{requirements}"',
+        file=sys.stderr,
+    )
+    return False
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -19,6 +37,9 @@ def main() -> int:
     args = parser.parse_args()
 
     repo_root = Path(__file__).resolve().parents[1]
+    if not require_pyyaml(repo_root):
+        return 2
+
     source_skills = repo_root / "skills"
     codex_home = Path(os.environ.get("CODEX_HOME") or (Path.home() / ".codex"))
     user_skills = Path.home() / ".agents" / "skills"

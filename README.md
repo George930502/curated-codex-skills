@@ -60,17 +60,20 @@ isolated `codex exec` without authentication will return `401 Unauthorized`.
 ## Validate
 
 The validator uses the current Python interpreter and forces UTF-8 mode, so it
-does not depend on a `python3` alias or the Windows system code page.
+does not depend on the Windows system code page. Install its `PyYAML`
+dependency once before running it.
 
 ### macOS/Linux, WSL, or Git Bash
 
 ```bash
+python3 -m pip install -r scripts/requirements-validation.txt
 python3 scripts/validate.py
 ```
 
 ### Windows PowerShell
 
 ```powershell
+py -3 -m pip install -r .\scripts\requirements-validation.txt
 py -3 .\scripts\validate.py
 ```
 
