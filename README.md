@@ -29,17 +29,49 @@ third-party notices are in [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md).
 
 ## Install
 
+Clone the repository, then run the installer for your shell. The installers
+copy every skill into `${CODEX_HOME:-$HOME/.codex}/skills/` without requiring
+`rsync`.
+
+### macOS/Linux, WSL, or Git Bash
+
 ```bash
 git clone https://github.com/George930502/prompt-review-and-dispatch.git
-rsync -a prompt-review-and-dispatch/skills/ "${CODEX_HOME:-$HOME/.codex}/skills/"
+bash prompt-review-and-dispatch/scripts/install.sh
+```
+
+### Windows PowerShell
+
+```powershell
+git clone https://github.com/George930502/prompt-review-and-dispatch.git
+powershell -NoProfile -ExecutionPolicy Bypass -File .\prompt-review-and-dispatch\scripts\install.ps1
 ```
 
 Restart Codex, then invoke `$prompt-review-and-dispatch`.
 
+The final invocation must run inside a configured and authenticated Codex
+session. Installing the skills does not provide Codex credentials; an
+isolated `codex exec` without authentication will return `401 Unauthorized`.
+
 ## Validate
 
+The validator uses the current Python interpreter and forces UTF-8 mode, so it
+does not depend on a `python3` alias or the Windows system code page.
+
+### macOS/Linux, WSL, or Git Bash
+
 ```bash
-for skill in skills/*; do
-  python3 "${CODEX_HOME:-$HOME/.codex}/skills/.system/skill-creator/scripts/quick_validate.py" "$skill"
-done
+python3 prompt-review-and-dispatch/scripts/validate.py
 ```
+
+### Windows PowerShell
+
+```powershell
+py -3 .\prompt-review-and-dispatch\scripts\validate.py
+```
+
+The command validates the installed copy and requires the Codex skill validator at
+`${CODEX_HOME:-$HOME/.codex}/skills/.system/skill-creator/scripts/quick_validate.py`.
+To validate a checkout before installing it from the clone's parent directory,
+append `--skills-dir prompt-review-and-dispatch/skills`. If you are already in
+the repository directory, use `--skills-dir skills` instead.
