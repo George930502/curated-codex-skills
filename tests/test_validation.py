@@ -35,6 +35,19 @@ class ValidationTests(unittest.TestCase):
             "name must match",
         )
 
+    def test_skill_name_must_be_bounded_lowercase_kebab_case(self) -> None:
+        self.assert_skill_error(
+            "Bad--Name",
+            "---\nname: Bad--Name\ndescription: A useful skill.\n---\n",
+            "lowercase kebab-case",
+        )
+        long_name = "a" * 65
+        self.assert_skill_error(
+            long_name,
+            f"---\nname: {long_name}\ndescription: A useful skill.\n---\n",
+            "at most 64 characters",
+        )
+
     def test_description_is_required(self) -> None:
         self.assert_skill_error(
             "missing-description",
