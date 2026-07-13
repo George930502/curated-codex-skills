@@ -21,7 +21,8 @@ def main() -> int:
     repo_root = Path(__file__).resolve().parents[1]
     source_skills = repo_root / "skills"
     codex_home = Path(os.environ.get("CODEX_HOME") or (Path.home() / ".codex"))
-    skills_dir = (args.skills_dir or codex_home / "skills").expanduser().resolve()
+    user_skills = Path.home() / ".agents" / "skills"
+    skills_dir = (args.skills_dir or user_skills).expanduser().resolve()
     validator = (
         codex_home
         / "skills"

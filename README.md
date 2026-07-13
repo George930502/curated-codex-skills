@@ -29,22 +29,26 @@ third-party notices are in [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md).
 
 ## Install
 
-Clone the repository, then run the installer for your shell. The installers
-copy every skill into `${CODEX_HOME:-$HOME/.codex}/skills/` without requiring
-`rsync`.
+Clone the repository, enter it, then run the installer for your shell. The
+installers copy every skill into the
+[official user-level directory](https://learn.chatgpt.com/docs/build-skills.md#where-to-save-skills),
+`$HOME/.agents/skills`, without requiring `rsync`. On Windows this resolves to
+`%USERPROFILE%\.agents\skills`.
 
 ### macOS/Linux, WSL, or Git Bash
 
 ```bash
 git clone https://github.com/George930502/prompt-review-and-dispatch.git
-bash prompt-review-and-dispatch/scripts/install.sh
+cd prompt-review-and-dispatch
+bash scripts/install.sh
 ```
 
 ### Windows PowerShell
 
 ```powershell
 git clone https://github.com/George930502/prompt-review-and-dispatch.git
-powershell -NoProfile -ExecutionPolicy Bypass -File .\prompt-review-and-dispatch\scripts\install.ps1
+Set-Location .\prompt-review-and-dispatch
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\install.ps1
 ```
 
 Restart Codex, then invoke `$prompt-review-and-dispatch`.
@@ -61,17 +65,22 @@ does not depend on a `python3` alias or the Windows system code page.
 ### macOS/Linux, WSL, or Git Bash
 
 ```bash
-python3 prompt-review-and-dispatch/scripts/validate.py
+python3 scripts/validate.py
 ```
 
 ### Windows PowerShell
 
 ```powershell
-py -3 .\prompt-review-and-dispatch\scripts\validate.py
+py -3 .\scripts\validate.py
 ```
 
-The command validates the installed copy and requires the Codex skill validator at
+The command validates the installed copy in `$HOME/.agents/skills`. It uses the
+Codex system validator at
 `${CODEX_HOME:-$HOME/.codex}/skills/.system/skill-creator/scripts/quick_validate.py`.
-To validate a checkout before installing it from the clone's parent directory,
-append `--skills-dir prompt-review-and-dispatch/skills`. If you are already in
-the repository directory, use `--skills-dir skills` instead.
+To validate the checkout before installing, append `--skills-dir skills`.
+
+Codex still recognizes skills installed by its bundled installer under
+`$CODEX_HOME/skills`, but this repository uses the current documented global
+authoring location to avoid platform-specific destinations. Remove older copies
+of these same five skills from `$CODEX_HOME/skills` after verifying the new
+installation, otherwise duplicate names can appear in the skill selector.
