@@ -26,6 +26,7 @@ REQUIRED_FILES = (
     "THIRD_PARTY_NOTICES.md",
     "VERSION",
     "docs/agents/issue-tracker.md",
+    "docs/compatibility.md",
     "docs/releasing.md",
 )
 USES = re.compile(r"(?m)^\s*uses:\s*[^@\s]+@(?P<ref>[^\s#]+)")

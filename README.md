@@ -33,6 +33,8 @@ macOS, and Windows runners. WSL and Git Bash use the shell installer and have
 also been exercised manually. Native approval additionally depends on the
 Codex host exposing `request_user_input`; Windows setup is documented in
 [`docs/windows-native-input.md`](docs/windows-native-input.md).
+The evidence and limits for each surface are recorded in the
+[`compatibility matrix`](docs/compatibility.md).
 
 The skills require an interactive, authenticated Codex surface. They do not
 bundle credentials, enable experimental features silently, or claim support

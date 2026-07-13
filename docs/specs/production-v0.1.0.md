@@ -3,6 +3,11 @@
 The `v0.1.0` preview establishes Curated Codex Skills as a public umbrella
 collection while preserving the five existing skill identities and provenance.
 
+Starting evidence supplied for this release records successful installation on
+Windows, macOS, Linux, WSL, and Git Bash. Automated release-candidate evidence
+must independently exercise Linux, macOS, and Windows; WSL and Git Bash remain
+manual evidence and must not be presented as CI coverage.
+
 Acceptance requires:
 
 - consistent `curated-codex-skills` repository identity and public metadata;
