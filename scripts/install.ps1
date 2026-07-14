@@ -5,47 +5,134 @@ param(
 
 $ErrorActionPreference = 'Stop'
 
-$repoRoot = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
-$source = [System.IO.Path]::GetFullPath((Join-Path $repoRoot 'skills'))
-$destination = $Destination
+function Test-SubstDrive {
+    param([string]$Path)
 
-New-Item -ItemType Directory -Force -Path $destination | Out-Null
-$destination = [System.IO.Path]::GetFullPath((Resolve-Path -LiteralPath $destination).Path)
-if ($destination -eq [System.IO.Path]::GetPathRoot($destination)) {
-    throw 'Refusing to install skills into the filesystem root.'
-}
-$current = [System.IO.Path]::GetPathRoot($destination)
-foreach ($segment in $destination.Substring($current.Length) -split '[\\/]') {
-    if (-not $segment) {
-        continue
+    $command = Get-Command subst.exe -ErrorAction SilentlyContinue
+    if (-not $command) {
+        return $false
     }
-    $current = Join-Path $current $segment
-    if ((Get-Item -LiteralPath $current -Force).Attributes -band [System.IO.FileAttributes]::ReparsePoint) {
+    $prefix = [System.IO.Path]::GetPathRoot($Path) + ': =>'
+    foreach ($line in @(& $command.Source)) {
+        if ($line.TrimStart().StartsWith($prefix, [System.StringComparison]::OrdinalIgnoreCase)) {
+            return $true
+        }
+    }
+    return $false
+}
+
+function Resolve-UnaliasedDirectory {
+    param([string]$Path)
+
+    $fullPath = [System.IO.Path]::GetFullPath((Resolve-Path -LiteralPath $Path).Path)
+    if (Test-SubstDrive $fullPath) {
         throw 'Refusing to install through a filesystem alias.'
     }
+    $current = [System.IO.Path]::GetPathRoot($fullPath)
+    foreach ($segment in $fullPath.Substring($current.Length) -split '[\\/]') {
+        if (-not $segment) {
+            continue
+        }
+        $current = Join-Path $current $segment
+        if ((Get-Item -LiteralPath $current -Force).Attributes -band [System.IO.FileAttributes]::ReparsePoint) {
+            throw 'Refusing to install through a filesystem alias.'
+        }
+    }
+    return $fullPath
 }
-$sourcePrefix = $source + [System.IO.Path]::DirectorySeparatorChar
-if ([System.String]::Equals($destination, $source, [System.StringComparison]::OrdinalIgnoreCase) -or
-    $destination.StartsWith($sourcePrefix, [System.StringComparison]::OrdinalIgnoreCase)) {
+
+function Remove-Entry {
+    param([string]$Path)
+
+    $item = Get-Item -LiteralPath $Path -Force -ErrorAction SilentlyContinue
+    if (-not $item) {
+        return
+    }
+    if ($item.Attributes -band [System.IO.FileAttributes]::ReparsePoint) {
+        if ($item.PSIsContainer) {
+            [System.IO.Directory]::Delete($item.FullName)
+        } else {
+            [System.IO.File]::Delete($item.FullName)
+        }
+    } else {
+        Remove-Item -LiteralPath $Path -Recurse -Force
+    }
+}
+
+function Test-PathAtOrBelow {
+    param([string]$Path, [string]$Root)
+
+    $prefix = $Root + [System.IO.Path]::DirectorySeparatorChar
+    return [System.String]::Equals($Path, $Root, [System.StringComparison]::OrdinalIgnoreCase) -or
+        $Path.StartsWith($prefix, [System.StringComparison]::OrdinalIgnoreCase)
+}
+
+$repoRoot = Resolve-UnaliasedDirectory (Join-Path $PSScriptRoot '..')
+$source = Resolve-UnaliasedDirectory (Join-Path $repoRoot 'skills')
+$requested = [System.IO.Path]::GetFullPath($Destination)
+
+if ($requested -eq [System.IO.Path]::GetPathRoot($requested)) {
+    throw 'Refusing to install skills into the filesystem root.'
+}
+$existing = $requested
+while (-not (Test-Path -LiteralPath $existing -PathType Container)) {
+    $parent = Split-Path -LiteralPath $existing -Parent
+    if (-not $parent -or $parent -eq $existing) {
+        throw "Cannot resolve an existing parent for $requested."
+    }
+    $existing = $parent
+}
+$existing = Resolve-UnaliasedDirectory $existing
+if (Test-PathAtOrBelow $existing $source) {
+    throw 'Refusing to install into the packaged source catalog.'
+}
+
+New-Item -ItemType Directory -Force -Path $requested | Out-Null
+$destination = Resolve-UnaliasedDirectory $requested
+if (Test-PathAtOrBelow $destination $source) {
     throw 'Refusing to install into the packaged source catalog.'
 }
 
 $skills = @(Get-ChildItem -LiteralPath $source -Directory)
 foreach ($skill in $skills) {
     $target = Join-Path $destination $skill.Name
-    if (Test-Path -LiteralPath $target) {
-        $item = Get-Item -LiteralPath $target -Force
-        if ($item.Attributes -band [System.IO.FileAttributes]::ReparsePoint) {
-            if ($item.PSIsContainer) {
-                [System.IO.Directory]::Delete($item.FullName)
-            } else {
-                [System.IO.File]::Delete($item.FullName)
-            }
-        } else {
-            Remove-Item -LiteralPath $target -Recurse -Force
+    $transaction = Join-Path $destination ('.{0}.install.{1}' -f $skill.Name, [guid]::NewGuid())
+    $staging = Join-Path $transaction 'new'
+    $backup = Join-Path $transaction 'old'
+    New-Item -ItemType Directory -Path $transaction | Out-Null
+    try {
+        Copy-Item -LiteralPath $skill.FullName -Destination $staging -Recurse -Force
+    } catch {
+        Remove-Entry $transaction
+        throw
+    }
+
+    $hadTarget = $null -ne (Get-Item -LiteralPath $target -Force -ErrorAction SilentlyContinue)
+    if ($hadTarget) {
+        try {
+            Move-Item -LiteralPath $target -Destination $backup
+        } catch {
+            Remove-Entry $transaction
+            throw
         }
     }
-    Copy-Item -LiteralPath $skill.FullName -Destination $destination -Recurse -Force
+    try {
+        Move-Item -LiteralPath $staging -Destination $target
+    } catch {
+        if ($hadTarget) {
+            try {
+                Move-Item -LiteralPath $backup -Destination $target
+            } catch {
+                throw "Install failed; rollback is preserved at $backup."
+            }
+        }
+        Remove-Entry $transaction
+        throw
+    }
+    if ($hadTarget) {
+        Remove-Entry $backup
+    }
+    Remove-Entry $transaction
 }
 
 Write-Output ("Installed {0} skills into {1}" -f $skills.Count, $destination)
@@ -56,8 +143,15 @@ if (-not $codex) {
     Write-Warning "Codex CLI was not found. Install or update Codex, then enable $feature."
     Write-Output "PowerShell: codex features enable $feature"
 } else {
-    $featureOutput = @(& codex features list 2>$null)
-    if ($codex.CommandType -eq 'Application' -and $LASTEXITCODE -ne 0) {
+    $featureSucceeded = $false
+    try {
+        $LASTEXITCODE = 0
+        $featureOutput = @(& codex features list 2>$null)
+        $featureSucceeded = $? -and $LASTEXITCODE -eq 0
+    } catch {
+        $featureOutput = @()
+    }
+    if (-not $featureSucceeded) {
         Write-Warning 'Codex feature inspection failed. Run "codex features list" and resolve the error before using native approval.'
     } else {
         $featureLine = $featureOutput |

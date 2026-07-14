@@ -10,17 +10,20 @@ Versions use [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Fixed
 
 - Make upgrades replace each catalog-owned skill so removed files cannot remain
-  installed, while preserving unrelated user skills.
+  installed, while preserving unrelated user skills and rolling back a failed
+  replacement.
 - Distinguish missing, disabled, malformed, and failed Codex native-input
   capability diagnostics.
-- Refuse destructive install destinations at the filesystem root, inside the
-  packaged source catalog, or through an unsafe filesystem alias.
+- Refuse destructive install destinations at the filesystem root or inside the
+  packaged source catalog; canonicalize POSIX aliases and reject Windows
+  reparse or substituted-drive aliases.
 
 ### Changed
 
 - Exercise installers with spaces, Unicode, collisions, repeat installs, source
   parity, Windows PowerShell 5.1, PowerShell 7, Git Bash, and failure fixtures.
-- Validate Python 3.10 through 3.14 in addition to Linux, macOS, and Windows.
+- Validate Python 3.10 through 3.14 on Ubuntu in addition to the Python 3.11
+  Linux, macOS, and Windows installer matrix.
 - Enforce the shared persistent native-input contract as a repository invariant.
 
 ## [0.1.0] - 2026-07-14

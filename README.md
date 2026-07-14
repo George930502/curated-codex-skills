@@ -30,10 +30,11 @@ The installers target Codex's documented user skill directory,
 `$HOME/.agents/skills` (`%USERPROFILE%\.agents\skills` on Windows).
 
 The repository exercises installation and validation on GitHub-hosted Linux,
-macOS, and Windows runners, plus Python 3.10 through 3.14. Windows CI executes
-the shell installer through Git Bash and the PowerShell installer through both
-Windows PowerShell 5.1 and PowerShell 7. WSL has no retained runner artifact and
-is not an independently auditable compatibility claim. Native approval
+macOS, and Windows runners with Python 3.11. A separate Ubuntu matrix runs the
+validator and tests on Python 3.10 through 3.14. Windows CI executes the shell
+installer through Git Bash and the PowerShell installer through both Windows
+PowerShell 5.1 and PowerShell 7. WSL has no retained runner artifact and is not
+an independently auditable compatibility claim. Native approval
 additionally depends on the Codex host exposing `request_user_input`;
 Windows setup is documented in
 [`docs/windows-native-input.md`](docs/windows-native-input.md).
@@ -65,9 +66,11 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\install.ps1
 The installers copy all catalog skills and report whether
 `default_mode_request_user_input` is available and enabled. They do not change
 Codex configuration. Reinstalling replaces catalog-owned skill directories so
-deleted files do not linger; unrelated skill directories are preserved. Codex
-detects skill changes automatically, but a restart may be needed if they do not
-appear. To test an install without touching your real home, use:
+deleted files do not linger; unrelated skill directories are preserved. Local
+edits inside a catalog-named directory are replaced, so keep custom work in a
+separately named skill. Codex detects skill changes automatically, but a restart
+may be needed if they do not appear. To test an install without touching your
+real home, use:
 
 ```bash
 SKILLS_INSTALL_DIR="$(mktemp -d)/skills" bash scripts/install.sh

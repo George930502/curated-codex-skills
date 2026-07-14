@@ -22,12 +22,14 @@ native GitHub matrix and the existing `unittest` suite.
 
 - CPython 3.10 is the minimum because it is the oldest security-supported
   CPython listed by the cited Python status page. CI runs every supported minor
-  through 3.14.
+  through 3.14 on Ubuntu; the cross-platform jobs use 3.11.
 - The OS matrix uses GitHub's moving `-latest` labels to catch current hosted
   environment changes. Run logs record the actual Python and platform strings.
 - Installer tests cover spaces, Unicode, collisions, idempotent upgrades,
-  stale-file removal, unrelated-skill preservation, exact source parity, and
-  source-alias guards, and all capability diagnostic branches.
+  failed-copy retention, stale-file removal, unrelated-skill preservation,
+  exact source parity, source/destination alias and Windows substituted-drive
+  guards, and all capability diagnostic branches, including script-based Codex
+  command failures.
 - Codex has no numeric minimum in this project. A version is usable for the
   approval workflow only when the active surface exposes the required native
   tools; unsupported surfaces block safely.

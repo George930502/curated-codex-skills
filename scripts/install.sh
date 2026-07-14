@@ -3,8 +3,38 @@ set -euo pipefail
 
 script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd -P)
 repo_root=$(CDPATH= cd -- "$script_dir/.." && pwd -P)
+source_catalog="$repo_root/skills"
 destination=${SKILLS_INSTALL_DIR:-"$HOME/.agents/skills"}
 
+is_subst_path() {
+    command -v cygpath >/dev/null 2>&1 || return 1
+    command -v cmd.exe >/dev/null 2>&1 || return 1
+    windows_path=$(cygpath -w "$1")
+    drive=$(printf '%.2s' "$windows_path")
+    subst_output=$(cmd.exe /d /c subst 2>/dev/null | tr -d '\r')
+    case "$subst_output" in
+        *"$drive\\: =>"*) return 0 ;;
+        *) return 1 ;;
+    esac
+}
+
+existing=$destination
+while [ ! -d "$existing" ]; do
+    parent=$(dirname -- "$existing")
+    [ "$parent" != "$existing" ] || break
+    existing=$parent
+done
+existing=$(CDPATH= cd -- "$existing" && pwd -P)
+if is_subst_path "$source_catalog" || is_subst_path "$existing"; then
+    printf 'Refusing to install through a filesystem alias.\n' >&2
+    exit 2
+fi
+case "$existing/" in
+    "$source_catalog/"*)
+        printf 'Refusing to install into the packaged source catalog.\n' >&2
+        exit 2
+        ;;
+esac
 mkdir -p "$destination"
 destination=$(CDPATH= cd -- "$destination" && pwd -P)
 if [ "$destination" = / ]; then
@@ -12,18 +42,48 @@ if [ "$destination" = / ]; then
     exit 2
 fi
 case "$destination/" in
-    "$repo_root/skills/"*)
+    "$source_catalog/"*)
         printf 'Refusing to install into the packaged source catalog.\n' >&2
         exit 2
         ;;
 esac
 
 skill_count=0
-for skill in "$repo_root"/skills/*; do
+for skill in "$source_catalog"/*; do
     [ -d "$skill" ] || continue
-    target="$destination/${skill##*/}"
-    rm -rf "$target"
-    cp -R "$skill" "$target"
+    name=${skill##*/}
+    target="$destination/$name"
+    transaction=$(mktemp -d "$destination/.$name.install.XXXXXX")
+    staging="$transaction/new"
+    backup="$transaction/old"
+    if cp -R "$skill" "$staging"; then
+        :
+    else
+        status=$?
+        rm -rf "$transaction"
+        exit "$status"
+    fi
+    had_target=false
+    if [ -e "$target" ] || [ -L "$target" ]; then
+        if mv "$target" "$backup"; then
+            had_target=true
+        else
+            status=$?
+            rm -rf "$transaction"
+            exit "$status"
+        fi
+    fi
+    if mv "$staging" "$target"; then
+        rm -rf "$transaction"
+    else
+        status=$?
+        if [ "$had_target" = true ] && ! mv "$backup" "$target"; then
+            printf 'Install failed and rollback is preserved at %s.\n' "$backup" >&2
+            exit "$status"
+        fi
+        rm -rf "$transaction"
+        exit "$status"
+    fi
     skill_count=$((skill_count + 1))
 done
 printf 'Installed %s skills into %s\n' "$skill_count" "$destination"
