@@ -325,6 +325,28 @@ if "%CODEX_SCENARIO%"=="enabled-crlf" echo default_mode_request_user_input  unde
             check=False,
         )
 
+    def run_shell_raw_destination(
+        self,
+        executable: str,
+        destination: str,
+        repository: Path = ROOT,
+    ) -> subprocess.CompletedProcess[str]:
+        environment = os.environ.copy()
+        environment["SKILLS_INSTALL_DIR"] = destination
+        environment["PATH"] = f"{self.fake_bin}{os.pathsep}{environment['PATH']}"
+        environment["CODEX_SCENARIO"] = "enabled"
+        return subprocess.run(
+            [executable, str(repository / "scripts" / "install.sh")],
+            cwd=repository,
+            env=environment,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            check=False,
+        )
+
     def run_git_bash_drive_root(self, executable: str) -> subprocess.CompletedProcess[str]:
         environment = os.environ.copy()
         environment["SKILLS_INSTALL_DIR"] = "/c/"
@@ -633,6 +655,14 @@ if "%CODEX_SCENARIO%"=="enabled-crlf" echo default_mode_request_user_input  unde
                     self.assertIn("Refusing to install skills into the filesystem root", double_slash_root.stdout)
                     self.assertNotIn("REACHED_MKTEMP", double_slash_root.stdout)
 
+                    triple_destination = self.root / adapter_name / "triple slash destination"
+                    triple_slash = self.run_shell_raw_destination(
+                        executable,
+                        "///" + str(triple_destination).lstrip("/"),
+                    )
+                    self.assertEqual(0, triple_slash.returncode, triple_slash.stdout)
+                    self.assert_source_parity(triple_destination)
+
                 if adapter_name in {"bash", "git-bash"}:
                     base = self.root / adapter_name / "dot segment guard"
                     base.mkdir(parents=True)
@@ -690,10 +720,21 @@ if "%CODEX_SCENARIO%"=="enabled-crlf" echo default_mode_request_user_input  unde
                 self.assertIn("Refusing to install into the packaged source catalog", guarded.stdout)
 
                 if adapter_name == "bash" and os.name != "nt":
-                    double_slash_catalog = Path("/" + str(sandbox / "skills"))
-                    guarded_double_slash = run(double_slash_catalog, self.fake_bin, "enabled", sandbox)
+                    guarded_double_slash = self.run_shell_raw_destination(
+                        shutil.which("bash") or "bash",
+                        "/" + str(sandbox / "skills"),
+                        sandbox,
+                    )
                     self.assertNotEqual(0, guarded_double_slash.returncode, guarded_double_slash.stdout)
                     self.assertIn("Refusing to install skills into the filesystem root", guarded_double_slash.stdout)
+
+                    guarded_triple_slash = self.run_shell_raw_destination(
+                        shutil.which("bash") or "bash",
+                        "///" + str(sandbox / "skills").lstrip("/"),
+                        sandbox,
+                    )
+                    self.assertNotEqual(0, guarded_triple_slash.returncode, guarded_triple_slash.stdout)
+                    self.assertIn("Refusing to install into the packaged source catalog", guarded_triple_slash.stdout)
 
                 source_alias_message = (
                     "Refusing to install through a filesystem alias"

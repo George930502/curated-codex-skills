@@ -6,6 +6,16 @@ repo_root=$(CDPATH= cd -- "$script_dir/.." && pwd -P)
 source_catalog_requested="$repo_root/skills"
 destination=${SKILLS_INSTALL_DIR:-"$HOME/.agents/skills"}
 
+if [ -z "${MSYSTEM:-}" ]; then
+    case "$destination" in
+        ///*)
+            while [ "${destination#//}" != "$destination" ]; do
+                destination=${destination#/}
+            done
+            ;;
+    esac
+fi
+
 case "/$destination/" in
     */../*)
         printf 'Refusing to install through an unresolved parent segment.\n' >&2
