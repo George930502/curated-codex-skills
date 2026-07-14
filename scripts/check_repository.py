@@ -28,7 +28,6 @@ REQUIRED_FILES = (
     "docs/agents/issue-tracker.md",
     "docs/compatibility.md",
     "docs/releasing.md",
-    "docs/specs/production-v0.1.1.md",
     "docs/testing-strategy.md",
 )
 USES = re.compile(r"(?m)^\s*uses:\s*[^@\s]+@(?P<ref>[^\s#]+)")
@@ -95,27 +94,32 @@ def check_install_destinations() -> list[str]:
         errors.append("scripts/install.ps1: user destination or test override is missing")
     if ".codex/skills" in shell or ".codex\\skills" in powershell:
         errors.append("installers must use the documented .agents/skills destination")
+    for guard in (
+        "Refusing to install skills into the filesystem root",
+        "Refusing to install into the packaged source catalog",
+    ):
+        if guard not in shell or guard not in powershell:
+            errors.append(f"installers must both enforce safety guard: {guard}")
     return errors
 
 
 def check_native_input_contract() -> list[str]:
     contract_path = ROOT / "skills" / "grilling" / "NATIVE-INPUT.md"
+    if not contract_path.is_file():
+        return [f"missing required file: {contract_path.relative_to(ROOT)}"]
     contract = contract_path.read_text(encoding="utf-8")
-    normalized = " ".join(contract.split())
     required = (
-        "exactly one question",
-        "omit `autoResolutionMs`",
-        "(Recommended)",
-        "client adds the free-form `Other` choice",
-        "an empty answer change no state",
-        "A prose question is not a substitute",
-        "`目的已對齊 (Recommended)`",
-        "`同意 (Recommended)`",
+        "request_user_input",
+        "autoResolutionMs",
+        "- Grilling:",
+        "- Alignment:",
+        "- Approval:",
+        "- Rejection:",
     )
     errors = [
         f"{contract_path.relative_to(ROOT)}: missing required native-input rule {rule!r}"
         for rule in required
-        if rule not in normalized
+        if rule not in contract
     ]
     consumers = (
         "skills/domain-modeling/SKILL.md",
@@ -125,12 +129,16 @@ def check_native_input_contract() -> list[str]:
         "skills/prompt-review-and-dispatch/references/approval-protocol.md",
     )
     for relative in consumers:
-        if "NATIVE-INPUT.md" not in (ROOT / relative).read_text(encoding="utf-8"):
+        path = ROOT / relative
+        if not path.is_file():
+            errors.append(f"missing required file: {relative}")
+        elif "NATIVE-INPUT.md" not in path.read_text(encoding="utf-8"):
             errors.append(f"{relative}: must reference the native-input contract")
     return errors
 
 
 def main() -> int:
+    version_file = ROOT / "VERSION"
     errors = [
         f"missing required file: {relative}"
         for relative in REQUIRED_FILES
@@ -141,9 +149,11 @@ def main() -> int:
     errors.extend(check_workflows())
     errors.extend(check_install_destinations())
     errors.extend(check_native_input_contract())
-    version = (ROOT / "VERSION").read_text(encoding="utf-8").strip() if (ROOT / "VERSION").is_file() else ""
+    version = version_file.read_text(encoding="utf-8").strip() if version_file.is_file() else ""
     if not re.fullmatch(r"\d+\.\d+\.\d+", version):
         errors.append("VERSION must contain one SemVer core version")
+    elif not (ROOT / "docs" / "specs" / f"production-v{version}.md").is_file():
+        errors.append(f"missing release spec for VERSION {version}")
     for error in errors:
         print(error, file=sys.stderr)
     print(f"REPOSITORY_CHECK_FAILED_COUNT={len(errors)}")

@@ -20,8 +20,9 @@ native GitHub matrix and the existing `unittest` suite.
 
 ## Maintained contract
 
-- CPython 3.10 is the minimum because the validator uses Python 3.10 syntax.
-  CI runs every currently supported minor through 3.14.
+- CPython 3.10 is the minimum because it is the oldest security-supported
+  CPython listed by the cited Python status page. CI runs every supported minor
+  through 3.14.
 - The OS matrix uses GitHub's moving `-latest` labels to catch current hosted
   environment changes. Run logs record the actual Python and platform strings.
 - Installer tests cover spaces, Unicode, collisions, idempotent upgrades,

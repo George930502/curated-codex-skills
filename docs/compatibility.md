@@ -28,25 +28,31 @@ immutable.
 | Python | CPython 3.10, 3.11, 3.12, 3.13, and 3.14 | Standard-library validator and tests; no PyPy claim |
 | Paths and upgrades | Spaces, Unicode, file collisions, repeat install, stale-file removal, unrelated-skill preservation, source parity | Deterministic temporary directories only |
 | Codex capability | CLI absent; feature absent, enabled, disabled, malformed, and command failure | Fixtures prove installer branching, not historical Codex binaries or UI |
-| Skill discovery | Installed tree equals packaged source under the documented user-skill layout | CI does not authenticate or launch an interactive Codex client |
+| Skill discovery | Exact source parity is executed in isolated destinations; the documented `$HOME/.agents/skills` default is asserted statically | CI does not authenticate or launch an interactive Codex client |
 
-The executable candidate passed [CI run
+Executable commit `047b0a1` passed [CI run
 29309662837](https://github.com/George930502/curated-codex-skills/actions/runs/29309662837)
 and [CodeQL run
 29309662840](https://github.com/George930502/curated-codex-skills/actions/runs/29309662840).
 The CI run contains successful Ubuntu, macOS, Windows, all five Python-version,
-and aggregate jobs. Final protected-main links replace this candidate evidence
-before release.
+and aggregate jobs. Later candidate commits changed documentation only. Final
+protected-main links replace this candidate evidence before release.
 
 ## Direct native-input observation
+
+Manual scenario: invoke `$prompt-review-and-dispatch` with an incomplete prompt
+in a Default-mode desktop task; select the native alignment choice; inspect the
+displayed exact draft; leave or return an empty approval answer and confirm no
+dispatch; resume the task; then select native `同意` and confirm one thread-send
+result.
 
 On 2026-07-14, the active Codex desktop task on Linux reported
 `codex-cli 0.144.1` with `default_mode_request_user_input` enabled. The task
 displayed persistent native alignment and approval controls, accepted explicit
 clickable selections, preserved state after empty answers, and dispatched only
-after `同意` was selected. This is direct task-level evidence for that observed
-client and configuration; it is not automated GUI evidence and does not support
-a universal client/version claim.
+after `同意` was selected. This is a reproducible manual report for that observed
+client and configuration, but it has no retained independent GUI artifact and
+is not an independently auditable or universal client/version claim.
 
 WSL and historical Codex binaries remain unverified surfaces for `v0.1.1`.
 They use the capability policy: install may succeed, but workflows block if the

@@ -19,11 +19,20 @@ if (($destination + [System.IO.Path]::DirectorySeparatorChar).StartsWith($source
     throw 'Refusing to install into the packaged source catalog.'
 }
 
-$skills = @(Get-ChildItem -LiteralPath $source -Directory -Force)
+$skills = @(Get-ChildItem -LiteralPath $source -Directory)
 foreach ($skill in $skills) {
     $target = Join-Path $destination $skill.Name
     if (Test-Path -LiteralPath $target) {
-        Remove-Item -LiteralPath $target -Recurse -Force
+        $item = Get-Item -LiteralPath $target -Force
+        if ($item.Attributes -band [System.IO.FileAttributes]::ReparsePoint) {
+            if ($item.PSIsContainer) {
+                [System.IO.Directory]::Delete($item.FullName)
+            } else {
+                [System.IO.File]::Delete($item.FullName)
+            }
+        } else {
+            Remove-Item -LiteralPath $target -Recurse -Force
+        }
     }
     Copy-Item -LiteralPath $skill.FullName -Destination $destination -Recurse -Force
 }
@@ -36,8 +45,8 @@ if (-not $codex) {
     Write-Warning "Codex CLI was not found. Install or update Codex, then enable $feature."
     Write-Output "PowerShell: codex features enable $feature"
 } else {
-    $featureOutput = @(& $codex.Source features list 2>$null)
-    if ($LASTEXITCODE -ne 0) {
+    $featureOutput = @(& codex features list 2>$null)
+    if ($codex.CommandType -eq 'Application' -and $LASTEXITCODE -ne 0) {
         Write-Warning 'Codex feature inspection failed. Run "codex features list" and resolve the error before using native approval.'
     } else {
         $featureLine = $featureOutput |

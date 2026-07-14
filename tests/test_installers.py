@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import importlib.util
 import os
 from pathlib import Path
 import shutil
@@ -9,9 +10,11 @@ import unittest
 
 
 ROOT = Path(__file__).resolve().parents[1]
-SHELL_INSTALLER = ROOT / "scripts" / "install.sh"
-POWERSHELL_INSTALLER = ROOT / "scripts" / "install.ps1"
 FEATURE = "default_mode_request_user_input"
+SPEC = importlib.util.spec_from_file_location("validate", ROOT / "scripts" / "validate.py")
+assert SPEC and SPEC.loader
+validate = importlib.util.module_from_spec(SPEC)
+SPEC.loader.exec_module(validate)
 
 
 class InstallerTests(unittest.TestCase):
@@ -43,7 +46,12 @@ if "%CODEX_SCENARIO%"=="enabled" echo default_mode_request_user_input  under dev
         )
 
     def run_shell(
-        self, executable: str, destination: Path, fake_bin: Path | None, scenario: str
+        self,
+        executable: str,
+        destination: Path,
+        fake_bin: Path | None,
+        scenario: str,
+        repository: Path = ROOT,
     ) -> subprocess.CompletedProcess[str]:
         environment = os.environ.copy()
         environment["CODEX_SCENARIO"] = scenario
@@ -66,10 +74,10 @@ if "%CODEX_SCENARIO%"=="enabled" echo default_mode_request_user_input  under dev
                 if fake_bin
                 else "/usr/bin:/bin"
             )
-            command = [executable, str(SHELL_INSTALLER)]
+            command = [executable, str(repository / "scripts" / "install.sh")]
         return subprocess.run(
             command,
-            cwd=ROOT,
+            cwd=repository,
             env=environment,
             text=True,
             encoding="utf-8",
@@ -80,7 +88,12 @@ if "%CODEX_SCENARIO%"=="enabled" echo default_mode_request_user_input  under dev
         )
 
     def run_powershell(
-        self, executable: str, destination: Path, fake_bin: Path | None, scenario: str
+        self,
+        executable: str,
+        destination: Path,
+        fake_bin: Path | None,
+        scenario: str,
+        repository: Path = ROOT,
     ) -> subprocess.CompletedProcess[str]:
         environment = os.environ.copy()
         environment["CODEX_SCENARIO"] = scenario
@@ -104,11 +117,11 @@ if "%CODEX_SCENARIO%"=="enabled" echo default_mode_request_user_input  under dev
                 "-ExecutionPolicy",
                 "Bypass",
                 "-File",
-                str(POWERSHELL_INSTALLER),
+                str(repository / "scripts" / "install.ps1"),
                 "-Destination",
                 str(destination),
             ],
-            cwd=ROOT,
+            cwd=repository,
             env=environment,
             text=True,
             encoding="utf-8",
@@ -120,22 +133,57 @@ if "%CODEX_SCENARIO%"=="enabled" echo default_mode_request_user_input  under dev
 
     def adapters(self):
         if os.name != "nt":
-            yield "bash", lambda destination, fake_bin, scenario: self.run_shell(
-                shutil.which("bash") or "bash", destination, fake_bin, scenario
+            yield "bash", lambda destination, fake_bin, scenario, repository=ROOT: self.run_shell(
+                shutil.which("bash") or "bash",
+                destination,
+                fake_bin,
+                scenario,
+                repository,
             )
             return
 
         found = {name: shutil.which(name) for name in ("powershell", "pwsh", "bash")}
         if os.environ.get("GITHUB_ACTIONS"):
             self.assertTrue(all(found.values()), f"missing CI shells: {found}")
+        identities = {}
+        for name, expected in (("powershell", "5"), ("pwsh", "7")):
+            if found[name]:
+                result = subprocess.run(
+                    [found[name] or name, "-NoProfile", "-Command", "$PSVersionTable.PSVersion.Major"],
+                    text=True,
+                    encoding="utf-8",
+                    errors="replace",
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.STDOUT,
+                    check=False,
+                )
+                identities[name] = result.stdout.strip()
+                self.assertEqual(expected, identities[name], result.stdout)
+        if found["bash"]:
+            result = subprocess.run(
+                [found["bash"] or "bash", "-lc", 'printf "%s" "$OSTYPE"'],
+                text=True,
+                encoding="utf-8",
+                errors="replace",
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                check=False,
+            )
+            identities["bash"] = result.stdout.strip()
+            self.assertTrue(identities["bash"].startswith("msys"), result.stdout)
+        print("WINDOWS_SHELL_IDENTITIES=" + ",".join(f"{key}:{value}" for key, value in identities.items()))
         for name in ("powershell", "pwsh"):
             if found[name]:
-                yield name, lambda destination, fake_bin, scenario, exe=found[name]: self.run_powershell(
-                    exe or name, destination, fake_bin, scenario
+                yield name, lambda destination, fake_bin, scenario, repository=ROOT, exe=found[name]: self.run_powershell(
+                    exe or name, destination, fake_bin, scenario, repository
                 )
         if found["bash"]:
-            yield "git-bash", lambda destination, fake_bin, scenario: self.run_shell(
-                found["bash"] or "bash", destination, fake_bin, scenario
+            yield "git-bash", lambda destination, fake_bin, scenario, repository=ROOT: self.run_shell(
+                found["bash"] or "bash",
+                destination,
+                fake_bin,
+                scenario,
+                repository,
             )
 
     def assert_source_parity(self, destination: Path) -> None:
@@ -143,17 +191,20 @@ if "%CODEX_SCENARIO%"=="enabled" echo default_mode_request_user_input  under dev
             if not source.is_dir():
                 continue
             installed = destination / source.name
-            source_files = {
-                path.relative_to(source): path.read_bytes()
-                for path in source.rglob("*")
-                if path.is_file()
-            }
-            installed_files = {
-                path.relative_to(installed): path.read_bytes()
-                for path in installed.rglob("*")
-                if path.is_file()
-            }
-            self.assertEqual(source_files, installed_files, source.name)
+            self.assertEqual([], validate.compare_packaged_skill(source, installed))
+
+    def make_directory_link(self, link: Path, target: Path) -> None:
+        if os.name == "nt":
+            result = subprocess.run(
+                ["cmd", "/c", "mklink", "/J", str(link), str(target)],
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                check=False,
+            )
+            self.assertEqual(0, result.returncode, result.stdout)
+        else:
+            link.symlink_to(target, target_is_directory=True)
 
     def test_install_upgrade_and_capability_diagnostics(self) -> None:
         expected = {
@@ -181,6 +232,18 @@ if "%CODEX_SCENARIO%"=="enabled" echo default_mode_request_user_input  under dev
                     self.assertIn(expected["enabled"], first.stdout)
                     self.assert_source_parity(destination)
 
+                    linked = destination / "prompt-review-and-dispatch"
+                    shutil.rmtree(linked)
+                    outside = root / adapter_name / "outside link target"
+                    outside.mkdir()
+                    sentinel = outside / "preserve.txt"
+                    sentinel.write_text("preserve me", encoding="utf-8")
+                    self.make_directory_link(linked, outside)
+                    linked_result = run(destination, fake_bin, "enabled")
+                    self.assertEqual(0, linked_result.returncode, linked_result.stdout)
+                    self.assertTrue(sentinel.is_file())
+                    self.assert_source_parity(destination)
+
                     stale = destination / "prompt-review-and-dispatch" / "stale.txt"
                     stale.write_text("remove me", encoding="utf-8")
                     unrelated = destination / "user-owned-skill"
@@ -190,6 +253,15 @@ if "%CODEX_SCENARIO%"=="enabled" echo default_mode_request_user_input  under dev
                     self.assertFalse(stale.exists())
                     self.assertTrue(unrelated.is_dir())
                     self.assert_source_parity(destination)
+
+                with self.subTest(adapter=adapter_name, behavior="source-guard"):
+                    sandbox = root / adapter_name / "guard repo"
+                    shutil.copytree(ROOT / "scripts", sandbox / "scripts")
+                    shutil.copytree(ROOT / "skills", sandbox / "skills")
+                    guarded = run(sandbox / "skills", fake_bin, "enabled", sandbox)
+                    self.assertEqual(2, guarded.returncode, guarded.stdout)
+                    self.assertIn("Refusing to install into the packaged source catalog", guarded.stdout)
+                    self.assertTrue((sandbox / "skills" / "prompt-review-and-dispatch" / "SKILL.md").is_file())
 
                 for scenario, message in expected.items():
                     with self.subTest(adapter=adapter_name, scenario=scenario):
