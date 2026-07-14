@@ -27,12 +27,31 @@ is_subst_path() {
 
 is_filesystem_root() {
     [ "$1" = / ] && return 0
+    normalized=${1%/}
+    case "$normalized" in
+        //*)
+            unc_tail=${normalized#//}
+            case "$unc_tail" in
+                */*/*) ;;
+                */*) return 0 ;;
+            esac
+            ;;
+    esac
     command -v cygpath >/dev/null 2>&1 || return 1
     root_path=$(cygpath -w "$1")
     case "$root_path" in
         [A-Za-z]:\\) return 0 ;;
+        \\\\*)
+            unc_tail=${root_path#\\\\}
+            unc_tail=${unc_tail%\\}
+            case "$unc_tail" in
+                *\\*\\*) ;;
+                *\\*) return 0 ;;
+            esac
+            ;;
         *) return 1 ;;
     esac
+    return 1
 }
 
 existing=$destination
@@ -44,6 +63,10 @@ done
 existing=$(CDPATH= cd -- "$existing" && pwd -P)
 if is_subst_path "$source_catalog" || is_subst_path "$existing"; then
     printf 'Refusing to install through a filesystem alias.\n' >&2
+    exit 2
+fi
+if is_filesystem_root "$destination"; then
+    printf 'Refusing to install skills into the filesystem root.\n' >&2
     exit 2
 fi
 case "$existing/" in

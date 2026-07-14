@@ -73,12 +73,33 @@ if "%CODEX_SCENARIO%"=="enabled" echo default_mode_request_user_input  under dev
         command.write_text("#!/usr/bin/env sh\nexit 9\n", encoding="ascii")
         command.chmod(0o755)
 
+    def write_failing_swap(self, directory: Path) -> None:
+        directory.mkdir(parents=True)
+        command = directory / "mv"
+        command.write_text(
+            "#!/usr/bin/env sh\n"
+            "case \"$1\" in */new) exit 10 ;; esac\n"
+            "exec /bin/mv \"$@\"\n",
+            encoding="ascii",
+        )
+        command.chmod(0o755)
+
     def write_drive_root_probe(self, directory: Path) -> None:
         self.write_fake_codex(directory)
         command = directory / "cygpath"
         command.write_text(
             "#!/usr/bin/env sh\n"
             "if [ \"$1\" = -w ]; then printf 'C:\\\\\n'; else exit 2; fi\n",
+            encoding="ascii",
+        )
+        command.chmod(0o755)
+
+    def write_unc_root_probe(self, directory: Path) -> None:
+        self.write_fake_codex(directory)
+        command = directory / "cygpath"
+        command.write_text(
+            "#!/usr/bin/env sh\n"
+            "if [ \"$1\" = -w ]; then printf '\\\\\\\\server\\\\share\\n'; else exit 2; fi\n",
             encoding="ascii",
         )
         command.chmod(0o755)
@@ -100,6 +121,37 @@ if "%CODEX_SCENARIO%"=="enabled" echo default_mode_request_user_input  under dev
                 "Bypass",
                 "-Command",
                 "function Copy-Item { throw 'simulated copy failure' }; "
+                "& $env:TEST_INSTALLER -Destination $env:TEST_DESTINATION",
+            ],
+            cwd=repository,
+            env=environment,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            check=False,
+        )
+
+    def run_powershell_swap_failure(
+        self,
+        executable: str,
+        destination: Path,
+        repository: Path = ROOT,
+    ) -> subprocess.CompletedProcess[str]:
+        environment = os.environ.copy()
+        environment["TEST_INSTALLER"] = str(repository / "scripts" / "install.ps1")
+        environment["TEST_DESTINATION"] = str(destination)
+        return subprocess.run(
+            [
+                executable,
+                "-NoProfile",
+                "-ExecutionPolicy",
+                "Bypass",
+                "-Command",
+                "function Move-Item { param([string]$LiteralPath, [string]$Destination); "
+                "if ((Split-Path -Leaf $LiteralPath) -eq 'new') { throw 'simulated swap failure' }; "
+                "Microsoft.PowerShell.Management\\Move-Item -LiteralPath $LiteralPath -Destination $Destination }; "
                 "& $env:TEST_INSTALLER -Destination $env:TEST_DESTINATION",
             ],
             cwd=repository,
@@ -400,6 +452,18 @@ if "%CODEX_SCENARIO%"=="enabled" echo default_mode_request_user_input  under dev
                 self.assertNotEqual(0, failed_copy.returncode, failed_copy.stdout)
                 self.assertTrue(marker.is_file(), failed_copy.stdout)
 
+                if adapter_name in {"powershell", "pwsh"}:
+                    failed_swap = self.run_powershell_swap_failure(
+                        shutil.which(adapter_name) or adapter_name,
+                        destination,
+                    )
+                else:
+                    failing_bin = self.root / adapter_name / "failing swap bin"
+                    self.write_failing_swap(failing_bin)
+                    failed_swap = run(destination, failing_bin, "enabled")
+                self.assertNotEqual(0, failed_swap.returncode, failed_swap.stdout)
+                self.assertTrue(marker.is_file(), failed_swap.stdout)
+
                 recovered = run(destination, self.fake_bin, "enabled")
                 self.assertEqual(0, recovered.returncode, recovered.stdout)
                 self.assert_source_parity(destination)
@@ -450,6 +514,16 @@ if "%CODEX_SCENARIO%"=="enabled" echo default_mode_request_user_input  under dev
                 self.assertNotEqual(0, aliased.returncode, aliased.stdout)
                 self.assertIn(alias_message, aliased.stdout)
                 self.assertTrue((sandbox / "skills" / "prompt-review-and-dispatch" / "SKILL.md").is_file())
+
+                if adapter_name in {"bash", "git-bash"}:
+                    unc_probe_bin = self.root / adapter_name / "unc root probe"
+                    self.write_unc_root_probe(unc_probe_bin)
+                    isolated_unc_root = self.root / adapter_name / "isolated unc root"
+                    isolated_unc_root.mkdir()
+                    unc_root = run(isolated_unc_root, unc_probe_bin, "enabled")
+                    self.assertNotEqual(0, unc_root.returncode, unc_root.stdout)
+                    self.assertIn("Refusing to install skills into the filesystem root", unc_root.stdout)
+                    self.assertEqual([], list(isolated_unc_root.iterdir()))
 
                 if os.name == "nt":
                     substituted_repo = self.make_subst(sandbox)

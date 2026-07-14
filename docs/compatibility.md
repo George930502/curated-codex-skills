@@ -27,7 +27,7 @@ remains immutable.
 | Shell installers | Bash on Ubuntu and macOS; Git Bash on Windows | Actual shell processes with isolated temporary destinations |
 | PowerShell installers | Windows PowerShell 5.1 and PowerShell 7 on Windows | Actual script execution, not parser-only inspection |
 | Python | CPython 3.10, 3.11, 3.12, 3.13, and 3.14 on Ubuntu | Standard-library validator and tests; macOS and Windows use 3.11; no PyPy claim |
-| Paths and upgrades | Spaces, Unicode, file collisions, repeat install, failed-copy retention, stale-file removal, unrelated-skill preservation, source parity, root guards, and source/destination aliases | POSIX canonicalizes aliases; Windows rejects reparse and substituted-drive aliases; deterministic temporary directories only |
+| Paths and upgrades | Spaces, Unicode, file collisions, repeat install, failed-copy retention, failed-swap rollback, stale-file removal, unrelated-skill preservation, source parity, local/drive/UNC root guards, and source/destination aliases | POSIX canonicalizes aliases; Windows rejects reparse and substituted-drive aliases; deterministic temporary directories only |
 | Codex capability | CLI absent; feature absent, enabled, disabled, malformed, and command failure | Fixtures prove installer branching, not historical Codex binaries or UI |
 | Skill discovery | Exact source parity is executed in isolated destinations; the documented `$HOME/.agents/skills` default is asserted statically | CI does not authenticate or launch an interactive Codex client |
 
