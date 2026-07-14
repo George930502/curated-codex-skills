@@ -6,16 +6,17 @@ param(
 $ErrorActionPreference = 'Stop'
 
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
-$source = Join-Path $repoRoot 'skills'
+$source = [System.IO.Path]::GetFullPath((Join-Path $repoRoot 'skills'))
 $destination = $Destination
 
 New-Item -ItemType Directory -Force -Path $destination | Out-Null
-$destination = (Resolve-Path -LiteralPath $destination).Path
+$destination = [System.IO.Path]::GetFullPath((Resolve-Path -LiteralPath $destination).Path)
 if ($destination -eq [System.IO.Path]::GetPathRoot($destination)) {
     throw 'Refusing to install skills into the filesystem root.'
 }
-$sourcePrefix = $source.TrimEnd([System.IO.Path]::DirectorySeparatorChar) + [System.IO.Path]::DirectorySeparatorChar
-if (($destination + [System.IO.Path]::DirectorySeparatorChar).StartsWith($sourcePrefix, [System.StringComparison]::OrdinalIgnoreCase)) {
+$sourcePrefix = $source + [System.IO.Path]::DirectorySeparatorChar
+if ([System.String]::Equals($destination, $source, [System.StringComparison]::OrdinalIgnoreCase) -or
+    $destination.StartsWith($sourcePrefix, [System.StringComparison]::OrdinalIgnoreCase)) {
     throw 'Refusing to install into the packaged source catalog.'
 }
 
