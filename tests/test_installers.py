@@ -59,6 +59,11 @@ if "%CODEX_SCENARIO%"=="enabled" echo default_mode_request_user_input  under dev
 """,
             encoding="ascii",
         )
+        if os.name == "nt":
+            for name in ("subst.exe", "cygpath.exe"):
+                shadow = directory / name
+                shadow.write_text("#!/usr/bin/env sh\nexit 99\n", encoding="ascii")
+                shadow.chmod(0o755)
 
     def write_failing_codex_script(self, directory: Path) -> None:
         directory.mkdir(parents=True)
@@ -257,6 +262,23 @@ if "%CODEX_SCENARIO%"=="enabled" echo default_mode_request_user_input  under dev
         return subprocess.run(
             command,
             cwd=repository,
+            env=environment,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            check=False,
+        )
+
+    def run_shell_missing_cygpath(self, destination: Path) -> subprocess.CompletedProcess[str]:
+        environment = os.environ.copy()
+        environment["SKILLS_INSTALL_DIR"] = str(destination)
+        environment["MSYSTEM"] = "MINGW64"
+        environment["PATH"] = "/bin"
+        return subprocess.run(
+            [shutil.which("bash") or "bash", str(ROOT / "scripts" / "install.sh")],
+            cwd=ROOT,
             env=environment,
             text=True,
             encoding="utf-8",
@@ -511,6 +533,13 @@ if "%CODEX_SCENARIO%"=="enabled" echo default_mode_request_user_input  under dev
     def test_source_and_alias_guards(self) -> None:
         for adapter_name, run in self.adapters():
             with self.subTest(adapter=adapter_name):
+                if adapter_name == "bash" and os.name != "nt":
+                    missing_cygpath_destination = self.root / adapter_name / "missing cygpath"
+                    missing_cygpath = self.run_shell_missing_cygpath(missing_cygpath_destination)
+                    self.assertNotEqual(0, missing_cygpath.returncode, missing_cygpath.stdout)
+                    self.assertIn("Cannot inspect Git Bash paths without cygpath", missing_cygpath.stdout)
+                    self.assertFalse(missing_cygpath_destination.exists())
+
                 if adapter_name in {"bash", "git-bash"}:
                     base = self.root / adapter_name / "dot segment guard"
                     base.mkdir(parents=True)

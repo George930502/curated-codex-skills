@@ -13,21 +13,38 @@ case "/$destination/" in
         ;;
 esac
 
-is_subst_path() {
-    command -v cygpath >/dev/null 2>&1 || return 1
-    subst_path=$(command -v subst.exe 2>/dev/null || true)
-    if [ -z "$subst_path" ] && [ -n "${MSYSTEM:-}" ]; then
-        windows_root=${SystemRoot:-${SYSTEMROOT:-C:\\Windows}}
-        subst_path=$(cygpath -u "$windows_root")/System32/subst.exe
+cygpath_path=
+if [ -n "${MSYSTEM:-}" ]; then
+    for candidate in /usr/bin/cygpath.exe /usr/bin/cygpath; do
+        if [ -x "$candidate" ]; then
+            cygpath_path=$candidate
+            break
+        fi
+    done
+    if [ -z "$cygpath_path" ]; then
+        printf 'Cannot inspect Git Bash paths without cygpath.\n' >&2
+        exit 2
     fi
+else
+    cygpath_path=$(command -v cygpath 2>/dev/null || true)
+fi
+
+is_subst_path() {
+    [ -n "${MSYSTEM:-}" ] || return 1
+    windows_root=${SystemRoot:-${SYSTEMROOT:-C:\\Windows}}
+    subst_path=$("$cygpath_path" -u "$windows_root")/System32/subst.exe
     if [ ! -x "$subst_path" ]; then
-        [ -n "${MSYSTEM:-}" ] || return 1
         printf 'Cannot inspect Windows substituted drives without subst.exe.\n' >&2
         return 2
     fi
-    windows_path=$(cygpath -w "$1")
+    windows_path=$("$cygpath_path" -w "$1")
     drive=$(printf '%.2s' "$windows_path")
-    subst_output=$("$subst_path" 2>/dev/null | tr -d '\r')
+    if subst_output=$("$subst_path" 2>/dev/null); then
+        subst_output=$(printf '%s' "$subst_output" | tr -d '\r')
+    else
+        printf 'Windows substituted-drive inspection failed.\n' >&2
+        return 2
+    fi
     case "$subst_output" in
         *"$drive\\: =>"*) return 0 ;;
         *) return 1 ;;
@@ -46,8 +63,8 @@ is_filesystem_root() {
             esac
             ;;
     esac
-    command -v cygpath >/dev/null 2>&1 || return 1
-    root_path=$(cygpath -w "$1")
+    [ -n "$cygpath_path" ] || return 1
+    root_path=$("$cygpath_path" -w "$1")
     case "$root_path" in
         [A-Za-z]:\\) return 0 ;;
         \\\\*)
@@ -65,17 +82,13 @@ is_filesystem_root() {
 
 assert_no_windows_reparse_path() {
     [ -n "${MSYSTEM:-}" ] || return 0
-    command -v cygpath >/dev/null 2>&1 || return 0
-    powershell_path=$(command -v powershell.exe 2>/dev/null || true)
-    if [ -z "$powershell_path" ]; then
-        windows_root=${SystemRoot:-${SYSTEMROOT:-C:\\Windows}}
-        powershell_path=$(cygpath -u "$windows_root")/System32/WindowsPowerShell/v1.0/powershell.exe
-    fi
+    windows_root=${SystemRoot:-${SYSTEMROOT:-C:\\Windows}}
+    powershell_path=$("$cygpath_path" -u "$windows_root")/System32/WindowsPowerShell/v1.0/powershell.exe
     [ -x "$powershell_path" ] || {
         printf 'Cannot inspect Windows filesystem aliases without powershell.exe.\n' >&2
         return 2
     }
-    windows_path=$(cygpath -w "$1")
+    windows_path=$("$cygpath_path" -w "$1")
     if REPARSE_CHECK_PATH=$windows_path "$powershell_path" -NoProfile -NonInteractive -Command '
         $full = [IO.Path]::GetFullPath($env:REPARSE_CHECK_PATH)
         $current = [IO.Path]::GetPathRoot($full)

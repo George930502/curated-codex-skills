@@ -8,18 +8,17 @@ $ErrorActionPreference = 'Stop'
 function Test-SubstDrive {
     param([string]$Path)
 
-    $command = Get-Command subst.exe -ErrorAction SilentlyContinue
-    if (-not $command) {
-        $systemSubst = Join-Path $env:SystemRoot 'System32\subst.exe'
-        if (-not (Test-Path -LiteralPath $systemSubst -PathType Leaf)) {
-            throw 'Cannot inspect Windows substituted drives without subst.exe.'
-        }
-        $commandPath = $systemSubst
-    } else {
-        $commandPath = $command.Source
+    $commandPath = Join-Path $env:SystemRoot 'System32\subst.exe'
+    if (-not (Test-Path -LiteralPath $commandPath -PathType Leaf)) {
+        throw 'Cannot inspect Windows substituted drives without subst.exe.'
     }
     $prefix = [System.IO.Path]::GetPathRoot($Path) + ': =>'
-    foreach ($line in @(& $commandPath)) {
+    $LASTEXITCODE = 0
+    $output = @(& $commandPath)
+    if (-not $? -or $LASTEXITCODE -ne 0) {
+        throw 'Windows substituted-drive inspection failed.'
+    }
+    foreach ($line in $output) {
         if ($line.TrimStart().StartsWith($prefix, [System.StringComparison]::OrdinalIgnoreCase)) {
             return $true
         }
