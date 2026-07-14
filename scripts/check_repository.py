@@ -31,6 +31,12 @@ REQUIRED_FILES = (
     "docs/testing-strategy.md",
 )
 USES = re.compile(r"(?m)^\s*uses:\s*[^@\s]+@(?P<ref>[^\s#]+)")
+NATIVE_RETRY_LIFECYCLE = (
+    "If `request_user_input` returns without a selected option while the task is still "
+    "active, immediately call it again with the same question and options. Repeat "
+    "without a retry limit; do not finish the turn in an awaiting state that requires "
+    "a prose reply."
+)
 
 
 def markdown_files() -> list[Path]:
@@ -107,6 +113,10 @@ def check_install_destinations() -> list[str]:
     return errors
 
 
+def has_canonical_native_retry_lifecycle(contract: str) -> bool:
+    return NATIVE_RETRY_LIFECYCLE in " ".join(contract.split())
+
+
 def check_native_input_contract() -> list[str]:
     contract_path = ROOT / "skills" / "grilling" / "NATIVE-INPUT.md"
     if not contract_path.is_file():
@@ -119,8 +129,6 @@ def check_native_input_contract() -> list[str]:
         "- Alignment:",
         "- Approval:",
         "- Rejection:",
-        "Repeat without a retry limit",
-        "do not finish the turn in",
         "Only the host stopping the task",
     )
     errors = [
@@ -128,6 +136,10 @@ def check_native_input_contract() -> list[str]:
         for rule in required
         if rule not in contract
     ]
+    if not has_canonical_native_retry_lifecycle(contract):
+        errors.append(
+            f"{contract_path.relative_to(ROOT)}: native retry lifecycle must match the canonical contract"
+        )
     consumers = (
         "skills/domain-modeling/SKILL.md",
         "skills/grilling/SKILL.md",

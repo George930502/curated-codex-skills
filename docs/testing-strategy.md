@@ -4,6 +4,13 @@ Reviewed 2026-07-14. The project is a small standard-library validator plus two
 installers, not a Python package. The minimum useful stack is therefore the
 native GitHub matrix and the existing `unittest` suite.
 
+The published checkout is the installers' source-content trust boundary: they
+install every skill directory present in that catalog so future additions do
+not require a hard-coded allowlist. Repository validation and release review
+authorize published content. At runtime the installers reject source filesystem
+aliases and unsafe destination or recovery structures; they do not authenticate
+local edits or require Python, signatures, or a generated hash manifest.
+
 ## Decision
 
 | Tool or method | Decision | Reason |
@@ -30,8 +37,7 @@ native GitHub matrix and the existing `unittest` suite.
   post-commit cleanup failure, marked transaction cleanup and interrupted-backup
   recovery, catalog-wide preflight before mutation, ambiguous-backup refusal,
   transaction and marker-alias rejection, strict transaction structure, exact
-  UTF-8 and legacy PowerShell marker recovery across shells,
-  matching, stale-file removal,
+  UTF-8 and legacy PowerShell marker recovery across shells, stale-file removal,
   unrelated-skill and nested-junction target preservation, exact structural
   source parity with catalog, skill-root, and descendant aliases rejected,
   unresolved-parent rejection, source/destination alias, Windows
@@ -40,6 +46,10 @@ native GitHub matrix and the existing `unittest` suite.
   and Bash/Git Bash UNC share-root guards, plus all
   capability diagnostic branches, including CRLF output and script-based Codex
   command failures.
+- Existing catalog-owned target aliases are replaceable collisions. Installers
+  move or remove the link itself without following it, preserve the outside
+  target, and retain recovery support when an interrupted `old` entry is that
+  prior alias. Source aliases remain rejected before destination mutation.
 - Codex has no numeric minimum in this project. A version is usable for the
   approval workflow only when the active surface exposes the required native
   tools; unsupported surfaces block safely.
