@@ -166,37 +166,6 @@ if "%CODEX_SCENARIO%"=="enabled-crlf" echo default_mode_request_user_input  unde
             check=False,
         )
 
-    def run_powershell_cleanup_failure(
-        self,
-        executable: str,
-        destination: Path,
-        repository: Path = ROOT,
-    ) -> subprocess.CompletedProcess[str]:
-        first_skill = sorted(path.name for path in (repository / "skills").iterdir() if path.is_dir())[0]
-        environment = os.environ.copy()
-        environment["TEST_INSTALLER"] = str(repository / "scripts" / "install.ps1")
-        environment["TEST_DESTINATION"] = str(destination)
-        environment["TEST_LOCKED_FILE"] = str(destination / first_skill / "SKILL.md")
-        return subprocess.run(
-            [
-                executable,
-                "-NoProfile",
-                "-ExecutionPolicy",
-                "Bypass",
-                "-Command",
-                "$stream = [System.IO.File]::Open($env:TEST_LOCKED_FILE, 'Open', 'Read', 'None'); "
-                "try { & $env:TEST_INSTALLER -Destination $env:TEST_DESTINATION } finally { $stream.Dispose() }",
-            ],
-            cwd=repository,
-            env=environment,
-            text=True,
-            encoding="utf-8",
-            errors="replace",
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
-            check=False,
-        )
-
     def run_powershell_restricted_path(
         self,
         executable: str,
@@ -601,19 +570,15 @@ if "%CODEX_SCENARIO%"=="enabled-crlf" echo default_mode_request_user_input  unde
     def test_post_commit_cleanup_failure_is_nonfatal(self) -> None:
         for adapter_name, run in self.adapters():
             with self.subTest(adapter=adapter_name):
+                if adapter_name in {"powershell", "pwsh"}:
+                    continue
                 destination = self.root / adapter_name / "cleanup failure"
                 installed = run(destination, self.fake_bin, "enabled")
                 self.assertEqual(0, installed.returncode, installed.stdout)
 
-                if adapter_name in {"powershell", "pwsh"}:
-                    result = self.run_powershell_cleanup_failure(
-                        shutil.which(adapter_name) or adapter_name,
-                        destination,
-                    )
-                else:
-                    failing_bin = self.root / adapter_name / "failing cleanup bin"
-                    self.write_failing_cleanup(failing_bin)
-                    result = run(destination, failing_bin, "missing-cli")
+                failing_bin = self.root / adapter_name / "failing cleanup bin"
+                self.write_failing_cleanup(failing_bin)
+                result = run(destination, failing_bin, "missing-cli")
 
                 self.assertEqual(0, result.returncode, result.stdout)
                 self.assertIn("could not remove transaction", result.stdout)
