@@ -54,14 +54,33 @@ is_filesystem_root() {
     return 1
 }
 
-resolve_unaliased_windows_directory() {
-    logical=$(CDPATH= cd -- "$1" && pwd -L)
-    physical=$(CDPATH= cd -- "$1" && pwd -P)
-    if [ -n "${MSYSTEM:-}" ] && command -v cygpath >/dev/null 2>&1 && [ "$logical" != "$physical" ]; then
-        printf 'Refusing to install through a filesystem alias.\n' >&2
+assert_no_windows_reparse_path() {
+    [ -n "${MSYSTEM:-}" ] || return 0
+    command -v cygpath >/dev/null 2>&1 || return 0
+    command -v powershell.exe >/dev/null 2>&1 || {
+        printf 'Cannot inspect Windows filesystem aliases without powershell.exe.\n' >&2
         return 2
+    }
+    windows_path=$(cygpath -w "$1")
+    if REPARSE_CHECK_PATH=$windows_path powershell.exe -NoProfile -NonInteractive -Command '
+        $full = [IO.Path]::GetFullPath($env:REPARSE_CHECK_PATH)
+        $current = [IO.Path]::GetPathRoot($full)
+        foreach ($part in $full.Substring($current.Length) -split "[\\/]") {
+            if (-not $part) { continue }
+            $current = Join-Path $current $part
+            if ((Get-Item -LiteralPath $current -Force).Attributes -band [IO.FileAttributes]::ReparsePoint) { exit 3 }
+        }
+    ' >/dev/null; then
+        return 0
+    else
+        status=$?
     fi
-    printf '%s\n' "$physical"
+    if [ "$status" -eq 3 ]; then
+        printf 'Refusing to install through a filesystem alias.\n' >&2
+    else
+        printf 'Windows filesystem alias inspection failed.\n' >&2
+    fi
+    return 2
 }
 
 existing=$destination
@@ -70,7 +89,8 @@ while [ ! -d "$existing" ]; do
     [ "$parent" != "$existing" ] || break
     existing=$parent
 done
-existing=$(resolve_unaliased_windows_directory "$existing")
+assert_no_windows_reparse_path "$existing"
+existing=$(CDPATH= cd -- "$existing" && pwd -P)
 if is_subst_path "$source_catalog" || is_subst_path "$existing"; then
     printf 'Refusing to install through a filesystem alias.\n' >&2
     exit 2
@@ -86,7 +106,7 @@ case "$existing/" in
         ;;
 esac
 mkdir -p "$destination"
-destination=$(resolve_unaliased_windows_directory "$destination")
+destination=$(CDPATH= cd -- "$destination" && pwd -P)
 if is_filesystem_root "$destination"; then
     printf 'Refusing to install skills into the filesystem root.\n' >&2
     exit 2
