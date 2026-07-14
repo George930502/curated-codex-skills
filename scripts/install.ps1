@@ -78,6 +78,36 @@ function Test-PathAtOrBelow {
         $Path.StartsWith($prefix, [System.StringComparison]::OrdinalIgnoreCase)
 }
 
+function Test-TransactionMarker {
+    param([string]$Path, [string]$Name)
+
+    [byte[]]$actual = [System.IO.File]::ReadAllBytes($Path)
+    $encodings = @(
+        [System.Text.UTF8Encoding]::new($false),
+        [System.Text.UTF8Encoding]::new($true),
+        [System.Text.UnicodeEncoding]::new($false, $true)
+    )
+    foreach ($encoding in $encodings) {
+        foreach ($ending in @("`n", "`r`n")) {
+            [byte[]]$expected = $encoding.GetPreamble() + $encoding.GetBytes($Name + $ending)
+            if ($actual.Length -ne $expected.Length) {
+                continue
+            }
+            $matches = $true
+            for ($index = 0; $index -lt $actual.Length; $index++) {
+                if ($actual[$index] -ne $expected[$index]) {
+                    $matches = $false
+                    break
+                }
+            }
+            if ($matches) {
+                return $true
+            }
+        }
+    }
+    return $false
+}
+
 $repoRoot = Resolve-UnaliasedDirectory (Join-Path $PSScriptRoot '..')
 $source = Resolve-UnaliasedDirectory (Join-Path $repoRoot 'skills')
 if (@($Destination -split '[\\/]' | Where-Object { $_ -eq '..' }).Count -gt 0) {
@@ -121,8 +151,7 @@ foreach ($skill in $skills) {
         if (-not (Test-Path -LiteralPath $marker -PathType Leaf)) {
             continue
         }
-        $markerContent = [System.IO.File]::ReadAllText($marker)
-        if ($markerContent -ne ($skill.Name + "`n") -and $markerContent -ne ($skill.Name + "`r`n")) {
+        if (-not (Test-TransactionMarker $marker $skill.Name)) {
             continue
         }
         $validTransactions += $staleTransaction
@@ -163,7 +192,9 @@ foreach ($skill in $skills) {
     $backup = Join-Path $transaction 'old'
     New-Item -ItemType Directory -Path $transaction | Out-Null
     try {
-        Set-Content -LiteralPath (Join-Path $transaction '.curated-codex-skills-transaction') -Value $skill.Name
+        $markerPath = Join-Path $transaction '.curated-codex-skills-transaction'
+        $markerBytes = [System.Text.UTF8Encoding]::new($false).GetBytes($skill.Name + "`n")
+        [System.IO.File]::WriteAllBytes($markerPath, $markerBytes)
     } catch {
         Remove-Entry $transaction
         throw
