@@ -15,10 +15,19 @@ esac
 
 is_subst_path() {
     command -v cygpath >/dev/null 2>&1 || return 1
-    command -v subst.exe >/dev/null 2>&1 || return 1
+    subst_path=$(command -v subst.exe 2>/dev/null || true)
+    if [ -z "$subst_path" ] && [ -n "${MSYSTEM:-}" ]; then
+        windows_root=${SystemRoot:-${SYSTEMROOT:-C:\\Windows}}
+        subst_path=$(cygpath -u "$windows_root")/System32/subst.exe
+    fi
+    if [ ! -x "$subst_path" ]; then
+        [ -n "${MSYSTEM:-}" ] || return 1
+        printf 'Cannot inspect Windows substituted drives without subst.exe.\n' >&2
+        return 2
+    fi
     windows_path=$(cygpath -w "$1")
     drive=$(printf '%.2s' "$windows_path")
-    subst_output=$(subst.exe 2>/dev/null | tr -d '\r')
+    subst_output=$("$subst_path" 2>/dev/null | tr -d '\r')
     case "$subst_output" in
         *"$drive\\: =>"*) return 0 ;;
         *) return 1 ;;
@@ -103,10 +112,15 @@ while [ ! -d "$existing" ]; do
 done
 assert_no_windows_reparse_path "$existing"
 existing=$(CDPATH= cd -- "$existing" && pwd -P)
-if is_subst_path "$source_catalog" || is_subst_path "$existing"; then
-    printf 'Refusing to install through a filesystem alias.\n' >&2
-    exit 2
-fi
+for inspected_path in "$source_catalog" "$existing"; do
+    if is_subst_path "$inspected_path"; then
+        printf 'Refusing to install through a filesystem alias.\n' >&2
+        exit 2
+    else
+        status=$?
+        [ "$status" -eq 1 ] || exit "$status"
+    fi
+done
 if is_filesystem_root "$destination"; then
     printf 'Refusing to install skills into the filesystem root.\n' >&2
     exit 2

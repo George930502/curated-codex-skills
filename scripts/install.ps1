@@ -10,10 +10,16 @@ function Test-SubstDrive {
 
     $command = Get-Command subst.exe -ErrorAction SilentlyContinue
     if (-not $command) {
-        return $false
+        $systemSubst = Join-Path $env:SystemRoot 'System32\subst.exe'
+        if (-not (Test-Path -LiteralPath $systemSubst -PathType Leaf)) {
+            throw 'Cannot inspect Windows substituted drives without subst.exe.'
+        }
+        $commandPath = $systemSubst
+    } else {
+        $commandPath = $command.Source
     }
     $prefix = [System.IO.Path]::GetPathRoot($Path) + ': =>'
-    foreach ($line in @(& $command.Source)) {
+    foreach ($line in @(& $commandPath)) {
         if ($line.TrimStart().StartsWith($prefix, [System.StringComparison]::OrdinalIgnoreCase)) {
             return $true
         }

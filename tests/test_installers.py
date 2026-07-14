@@ -164,6 +164,36 @@ if "%CODEX_SCENARIO%"=="enabled" echo default_mode_request_user_input  under dev
             check=False,
         )
 
+    def run_powershell_restricted_path(
+        self,
+        executable: str,
+        destination: Path,
+        repository: Path = ROOT,
+    ) -> subprocess.CompletedProcess[str]:
+        environment = os.environ.copy()
+        environment["PATH"] = str(self.fake_bin)
+        environment["CODEX_SCENARIO"] = "enabled"
+        return subprocess.run(
+            [
+                executable,
+                "-NoProfile",
+                "-ExecutionPolicy",
+                "Bypass",
+                "-File",
+                str(repository / "scripts" / "install.ps1"),
+                "-Destination",
+                str(destination),
+            ],
+            cwd=repository,
+            env=environment,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            check=False,
+        )
+
     def run_shell(
         self,
         executable: str,
@@ -581,6 +611,22 @@ if "%CODEX_SCENARIO%"=="enabled" echo default_mode_request_user_input  under dev
                     )
                     self.assertNotEqual(0, substituted_destination.returncode, substituted_destination.stdout)
                     self.assertIn("Refusing to install through a filesystem alias", substituted_destination.stdout)
+
+                    if adapter_name in {"powershell", "pwsh"}:
+                        restricted_subst = self.run_powershell_restricted_path(
+                            shutil.which(adapter_name) or adapter_name,
+                            substituted_repo / "skills",
+                            sandbox,
+                        )
+                    else:
+                        restricted_subst = run(
+                            substituted_repo / "skills",
+                            None,
+                            "missing-cli",
+                            sandbox,
+                        )
+                    self.assertNotEqual(0, restricted_subst.returncode, restricted_subst.stdout)
+                    self.assertIn("Refusing to install through a filesystem alias", restricted_subst.stdout)
 
                     if adapter_name == "git-bash":
                         probe_bin = self.root / adapter_name / "drive root probe"
