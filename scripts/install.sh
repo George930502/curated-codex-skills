@@ -53,6 +53,11 @@ is_subst_path() {
 
 is_filesystem_root() {
     [ "$1" = / ] && return 0
+    if [ -z "${MSYSTEM:-}" ]; then
+        case "$1" in
+            //*) return 0 ;;
+        esac
+    fi
     normalized=${1%/}
     case "$normalized" in
         //*)

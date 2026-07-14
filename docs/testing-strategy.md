@@ -31,7 +31,8 @@ native GitHub matrix and the existing `unittest` suite.
   unrelated-skill and nested-junction target preservation, exact source parity,
   unresolved-parent rejection, source/destination alias, Windows
   substituted-drive with restricted and shadowed `PATH`, PowerShell and Git
-  Bash drive-root, and Bash/Git Bash UNC share-root guards, plus all
+  Bash drive-root, POSIX double-slash root/source aliases, and Bash/Git Bash UNC
+  share-root guards, plus all
   capability diagnostic branches, including CRLF output and script-based Codex
   command failures.
 - Codex has no numeric minimum in this project. A version is usable for the

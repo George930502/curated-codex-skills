@@ -305,6 +305,26 @@ if "%CODEX_SCENARIO%"=="enabled-crlf" echo default_mode_request_user_input  unde
             check=False,
         )
 
+    def run_shell_double_slash_root(self, executable: str) -> subprocess.CompletedProcess[str]:
+        return subprocess.run(
+            [
+                executable,
+                "-c",
+                "mktemp() { printf 'REACHED_MKTEMP\\n' >&2; return 99; }; "
+                "SKILLS_INSTALL_DIR=// source \"$1\"",
+                str(ROOT / "scripts" / "install.sh"),
+                str(ROOT / "scripts" / "install.sh"),
+            ],
+            cwd=ROOT,
+            env=os.environ.copy(),
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            check=False,
+        )
+
     def run_git_bash_drive_root(self, executable: str) -> subprocess.CompletedProcess[str]:
         environment = os.environ.copy()
         environment["SKILLS_INSTALL_DIR"] = "/c/"
@@ -607,6 +627,12 @@ if "%CODEX_SCENARIO%"=="enabled-crlf" echo default_mode_request_user_input  unde
                     self.assertIn("Cannot inspect Git Bash paths without cygpath", missing_cygpath.stdout)
                     self.assertFalse(missing_cygpath_destination.exists())
 
+                    executable = shutil.which("bash") or "bash"
+                    double_slash_root = self.run_shell_double_slash_root(executable)
+                    self.assertNotEqual(0, double_slash_root.returncode, double_slash_root.stdout)
+                    self.assertIn("Refusing to install skills into the filesystem root", double_slash_root.stdout)
+                    self.assertNotIn("REACHED_MKTEMP", double_slash_root.stdout)
+
                 if adapter_name in {"bash", "git-bash"}:
                     base = self.root / adapter_name / "dot segment guard"
                     base.mkdir(parents=True)
@@ -662,6 +688,12 @@ if "%CODEX_SCENARIO%"=="enabled-crlf" echo default_mode_request_user_input  unde
                 guarded = run(sandbox / "skills", self.fake_bin, "enabled", sandbox)
                 self.assertNotEqual(0, guarded.returncode, guarded.stdout)
                 self.assertIn("Refusing to install into the packaged source catalog", guarded.stdout)
+
+                if adapter_name == "bash" and os.name != "nt":
+                    double_slash_catalog = Path("/" + str(sandbox / "skills"))
+                    guarded_double_slash = run(double_slash_catalog, self.fake_bin, "enabled", sandbox)
+                    self.assertNotEqual(0, guarded_double_slash.returncode, guarded_double_slash.stdout)
+                    self.assertIn("Refusing to install skills into the filesystem root", guarded_double_slash.stdout)
 
                 source_alias_message = (
                     "Refusing to install through a filesystem alias"
