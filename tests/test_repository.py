@@ -40,6 +40,50 @@ class RepositoryTests(unittest.TestCase):
         )
         self.assertFalse(checks.has_canonical_native_retry_lifecycle(negated))
 
+    def test_native_contract_requires_english_controls(self) -> None:
+        contract = (ROOT / "skills" / "grilling" / "NATIVE-INPUT.md").read_text(
+            encoding="utf-8"
+        )
+        self.assertEqual([], checks.native_input_text_errors(contract))
+        missing_label = contract.replace("Approve (Recommended)", "Approve")
+        self.assertNotEqual([], checks.native_input_text_errors(missing_label))
+        for former_label in checks.FORMER_NATIVE_LABELS:
+            with self.subTest(former_label=former_label):
+                changed = contract + "\n" + former_label
+                self.assertNotEqual([], checks.native_input_text_errors(changed))
+        negated = contract + (
+            "\nDo not write every agent-authored native-control label in English."
+        )
+        self.assertNotEqual([], checks.native_input_text_errors(negated))
+
+    def test_approval_protocol_requires_exact_english_approval(self) -> None:
+        protocol = (
+            ROOT
+            / "skills"
+            / "prompt-review-and-dispatch"
+            / "references"
+            / "approval-protocol.md"
+        ).read_text(encoding="utf-8")
+        self.assertEqual([], checks.approval_protocol_errors(protocol))
+        normalized = " ".join(protocol.split())
+        for rule in checks.APPROVAL_RULES:
+            with self.subTest(rule=rule):
+                changed = normalized.replace(rule, "removed", 1)
+                self.assertNotEqual([], checks.approval_protocol_errors(changed))
+        contradictions = (
+            "Approve (Recommended) does not authorize dispatch.",
+            "Reject authorizes dispatch.",
+            "Other may authorize dispatch.",
+            "Never rely on only Approve (Recommended) authorizes dispatch.",
+            "Only Approve (Recommended) authorizes dispatch, except when Reject is selected.",
+            "Approve (Recommended) is not required to authorize dispatch.",
+            "Dispatch may proceed after Reject.",
+        )
+        for contradiction in contradictions:
+            with self.subTest(contradiction=contradiction):
+                changed = protocol + "\n" + contradiction
+                self.assertNotEqual([], checks.approval_protocol_errors(changed))
+
     def test_skill_catalog_matches_directories(self) -> None:
         readme = (ROOT / "README.md").read_text(encoding="utf-8")
         skills = sorted(path.name for path in (ROOT / "skills").iterdir() if path.is_dir())

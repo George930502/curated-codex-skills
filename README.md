@@ -4,10 +4,10 @@ A curated, production-tested collection of reusable Codex skills and workflows.
 Each skill is selected for a concrete workflow, kept auditable to its sources,
 and exercised through the platforms on which its behavior differs.
 
-> **Preview:** `v0.1.0` established the maintenance contract. The compatible
-> `v0.1.1` update hardens upgrades and compatibility checks. Interfaces may
-> evolve before `v1.0.0`; changes are tracked in the
-> [changelog](CHANGELOG.md).
+> **Preview:** `v0.1.0` established the maintenance contract, `v0.1.1`
+> hardened upgrades and compatibility checks, and `v0.1.2` defaults native
+> controls to English. Interfaces may evolve before `v1.0.0`; changes are
+> tracked in the [changelog](CHANGELOG.md).
 
 ## Catalog
 
@@ -38,6 +38,9 @@ an independently auditable compatibility claim. Native approval
 additionally depends on the Codex host exposing `request_user_input`;
 Windows setup is documented in
 [`docs/windows-native-input.md`](docs/windows-native-input.md).
+Agent-authored native controls default to English while normal assistant prose
+remains language-adaptive. The client controls localization of its built-in
+`Other` choice.
 The evidence and limits for each surface are recorded in the
 [`compatibility matrix`](docs/compatibility.md).
 

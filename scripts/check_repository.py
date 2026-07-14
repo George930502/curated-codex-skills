@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 from pathlib import Path
 import re
 import sys
@@ -37,6 +38,40 @@ NATIVE_RETRY_LIFECYCLE = (
     "without a retry limit; do not finish the turn in an awaiting state that requires "
     "a prose reply."
 )
+NATIVE_INPUT_RULES = (
+    "request_user_input",
+    "autoResolutionMs",
+    "- Grilling:",
+    "- Alignment:",
+    "- Approval:",
+    "- Rejection:",
+    "Aligned (Recommended)",
+    "Needs revision",
+    "Approve (Recommended)",
+    "Reject",
+    "in English, regardless of the conversation language",
+    "Normal assistant prose remains language-adaptive",
+    "host-controlled",
+    "Only the host stopping the task",
+)
+FORMER_NATIVE_LABELS = (
+    "\u76ee\u7684\u5df2\u5c0d\u9f4a",
+    "\u4ecd\u9700\u91d0\u6e05",
+    "\u540c\u610f (Recommended)",
+    "\u4e0d\u540c\u610f",
+    "`\u540c\u610f`",
+)
+APPROVAL_RULES = (
+    "Only `Approve (Recommended)` authorizes dispatch",
+    "On `Reject`, run the native rejection gate",
+    "Approval-gate `Other` is already the verbatim reason and does not authorize "
+    "dispatch",
+    "prompt: draft (unchanged)",
+)
+CRITICAL_CONTRACT_HASHES = {
+    "native-input": "51cc409d5cf799c339d189f2d90cc931a3c01b8a7682f61aac45b6d393c5fd97",
+    "approval": "deaf011795a5e2e124fabc85f034a1c152235767cdfd95d001adc1ba95ab8225",
+}
 
 
 def markdown_files() -> list[Path]:
@@ -117,24 +152,49 @@ def has_canonical_native_retry_lifecycle(contract: str) -> bool:
     return NATIVE_RETRY_LIFECYCLE in " ".join(contract.split())
 
 
+def native_input_text_errors(contract: str) -> list[str]:
+    normalized = " ".join(contract.split())
+    errors = [
+        f"missing required native-input rule {rule!r}"
+        for rule in NATIVE_INPUT_RULES
+        if rule not in normalized
+    ]
+    errors.extend(
+        f"contains former non-English native-control label {label!r}"
+        for label in FORMER_NATIVE_LABELS
+        if label in contract
+    )
+    errors.extend(critical_contract_errors("native-input", contract))
+    return errors
+
+
+def critical_contract_errors(name: str, text: str) -> list[str]:
+    actual = hashlib.sha256(text.encode()).hexdigest()
+    expected = CRITICAL_CONTRACT_HASHES[name]
+    if actual == expected:
+        return []
+    return [f"{name} content differs from its reviewed contract pin"]
+
+
+def approval_protocol_errors(protocol: str) -> list[str]:
+    normalized = " ".join(protocol.split())
+    errors = [
+        f"missing required approval rule {rule!r}"
+        for rule in APPROVAL_RULES
+        if rule not in normalized
+    ]
+    errors.extend(critical_contract_errors("approval", protocol))
+    return errors
+
+
 def check_native_input_contract() -> list[str]:
     contract_path = ROOT / "skills" / "grilling" / "NATIVE-INPUT.md"
     if not contract_path.is_file():
         return [f"missing required file: {contract_path.relative_to(ROOT)}"]
     contract = contract_path.read_text(encoding="utf-8")
-    required = (
-        "request_user_input",
-        "autoResolutionMs",
-        "- Grilling:",
-        "- Alignment:",
-        "- Approval:",
-        "- Rejection:",
-        "Only the host stopping the task",
-    )
     errors = [
-        f"{contract_path.relative_to(ROOT)}: missing required native-input rule {rule!r}"
-        for rule in required
-        if rule not in contract
+        f"{contract_path.relative_to(ROOT)}: {error}"
+        for error in native_input_text_errors(contract)
     ]
     if not has_canonical_native_retry_lifecycle(contract):
         errors.append(
@@ -154,9 +214,23 @@ def check_native_input_contract() -> list[str]:
             errors.append(f"missing required file: {relative}")
         elif "NATIVE-INPUT.md" not in path.read_text(encoding="utf-8"):
             errors.append(f"{relative}: must reference the native-input contract")
+    for path in markdown_files():
+        if path == contract_path:
+            continue
+        text = path.read_text(encoding="utf-8")
+        for label in FORMER_NATIVE_LABELS:
+            if label in text:
+                errors.append(
+                    f"{path.relative_to(ROOT)}: contains former non-English "
+                    f"native-control label {label!r}"
+                )
     approval_path = ROOT / consumers[-1]
     if approval_path.is_file():
         approval = approval_path.read_text(encoding="utf-8")
+        errors.extend(
+            f"{consumers[-1]}: {error}"
+            for error in approval_protocol_errors(approval)
+        )
         for rule in ("list_threads", "read_thread", "state: blocked", "Do not guess an identity"):
             if rule not in approval:
                 errors.append(f"{consumers[-1]}: missing destination-identity rule {rule!r}")
