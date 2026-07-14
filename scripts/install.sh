@@ -184,7 +184,9 @@ for skill in "$source_catalog"/*; do
         fi
     fi
     if mv "$staging" "$target"; then
-        rm -rf "$transaction"
+        if ! rm -rf "$transaction"; then
+            printf 'Warning: installed %s, but could not remove transaction %s.\n' "$name" "$transaction" >&2
+        fi
     else
         status=$?
         if [ "$had_target" = true ] && ! mv "$backup" "$target"; then
@@ -207,7 +209,7 @@ else
         if [ -z "$feature_line" ]; then
             printf 'Warning: this Codex version does not list %s. Update Codex before using native approval.\n' "$feature" >&2
         else
-            feature_state=$(printf '%s\n' "$feature_line" | awk '{ print $NF }')
+            feature_state=$(printf '%s\n' "$feature_line" | awk '{ state = $NF; sub(/\r$/, "", state); print state }')
             case "$feature_state" in
                 true)
                     printf '%s is enabled.\n' "$feature"

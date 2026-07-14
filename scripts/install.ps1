@@ -143,10 +143,11 @@ foreach ($skill in $skills) {
         Remove-Entry $transaction
         throw
     }
-    if ($hadTarget) {
-        Remove-Entry $backup
+    try {
+        Remove-Entry $transaction
+    } catch {
+        Write-Warning "Installed $($skill.Name), but could not remove transaction $transaction."
     }
-    Remove-Entry $transaction
 }
 
 Write-Output ("Installed {0} skills into {1}" -f $skills.Count, $destination)

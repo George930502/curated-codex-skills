@@ -13,7 +13,9 @@ ROOT = Path(__file__).resolve().parents[1]
 FEATURE = "default_mode_request_user_input"
 EXPECTED_DIAGNOSTICS = {
     "enabled": f"{FEATURE} is enabled.",
+    "enabled-crlf": f"{FEATURE} is enabled.",
     "disabled": f"{FEATURE} is disabled",
+    "disabled-crlf": f"{FEATURE} is disabled",
     "absent": f"does not list {FEATURE}",
     "malformed": f"unrecognized state for {FEATURE}",
     "failure": "Codex feature inspection failed",
@@ -40,7 +42,9 @@ class InstallerTests(unittest.TestCase):
             """#!/usr/bin/env sh
 case "${CODEX_SCENARIO:-enabled}" in
   enabled) printf '%s  under development  true\\n' 'default_mode_request_user_input' ;;
+  enabled-crlf) printf '%s  under development  true\\r\\n' 'default_mode_request_user_input' ;;
   disabled) printf '%s  under development  false\\n' 'default_mode_request_user_input' ;;
+  disabled-crlf) printf '%s  under development  false\\r\\n' 'default_mode_request_user_input' ;;
   absent) printf 'apps  stable  true\\n' ;;
   malformed) printf '%s  under development  maybe\\n' 'default_mode_request_user_input' ;;
   failure) exit 7 ;;
@@ -55,7 +59,9 @@ if "%CODEX_SCENARIO%"=="failure" exit /b 7
 if "%CODEX_SCENARIO%"=="absent" echo apps  stable  true
 if "%CODEX_SCENARIO%"=="malformed" echo default_mode_request_user_input  under development  maybe
 if "%CODEX_SCENARIO%"=="disabled" echo default_mode_request_user_input  under development  false
+if "%CODEX_SCENARIO%"=="disabled-crlf" echo default_mode_request_user_input  under development  false
 if "%CODEX_SCENARIO%"=="enabled" echo default_mode_request_user_input  under development  true
+if "%CODEX_SCENARIO%"=="enabled-crlf" echo default_mode_request_user_input  under development  true
 """,
             encoding="ascii",
         )
@@ -85,6 +91,17 @@ if "%CODEX_SCENARIO%"=="enabled" echo default_mode_request_user_input  under dev
             "#!/usr/bin/env sh\n"
             "case \"$1\" in */new) exit 10 ;; esac\n"
             "exec /bin/mv \"$@\"\n",
+            encoding="ascii",
+        )
+        command.chmod(0o755)
+
+    def write_failing_cleanup(self, directory: Path) -> None:
+        directory.mkdir(parents=True)
+        command = directory / "rm"
+        command.write_text(
+            "#!/usr/bin/env sh\n"
+            "case \"$*\" in *.install.*) exit 11 ;; esac\n"
+            "exec /bin/rm \"$@\"\n",
             encoding="ascii",
         )
         command.chmod(0o755)
@@ -138,6 +155,37 @@ if "%CODEX_SCENARIO%"=="enabled" echo default_mode_request_user_input  under dev
                 "if ((Split-Path -Leaf $LiteralPath) -eq 'new') { throw 'simulated swap failure' }; "
                 "Microsoft.PowerShell.Management\\Move-Item -LiteralPath $LiteralPath -Destination $Destination }; "
                 "& $env:TEST_INSTALLER -Destination $env:TEST_DESTINATION",
+            ],
+            cwd=repository,
+            env=environment,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            check=False,
+        )
+
+    def run_powershell_cleanup_failure(
+        self,
+        executable: str,
+        destination: Path,
+        repository: Path = ROOT,
+    ) -> subprocess.CompletedProcess[str]:
+        first_skill = sorted(path.name for path in (repository / "skills").iterdir() if path.is_dir())[0]
+        environment = os.environ.copy()
+        environment["TEST_INSTALLER"] = str(repository / "scripts" / "install.ps1")
+        environment["TEST_DESTINATION"] = str(destination)
+        environment["TEST_LOCKED_FILE"] = str(destination / first_skill / "SKILL.md")
+        return subprocess.run(
+            [
+                executable,
+                "-NoProfile",
+                "-ExecutionPolicy",
+                "Bypass",
+                "-Command",
+                "$stream = [System.IO.File]::Open($env:TEST_LOCKED_FILE, 'Open', 'Read', 'None'); "
+                "try { & $env:TEST_INSTALLER -Destination $env:TEST_DESTINATION } finally { $stream.Dispose() }",
             ],
             cwd=repository,
             env=environment,
@@ -548,6 +596,27 @@ if "%CODEX_SCENARIO%"=="enabled" echo default_mode_request_user_input  under dev
 
                 recovered = run(destination, self.fake_bin, "enabled")
                 self.assertEqual(0, recovered.returncode, recovered.stdout)
+                self.assert_source_parity(destination)
+
+    def test_post_commit_cleanup_failure_is_nonfatal(self) -> None:
+        for adapter_name, run in self.adapters():
+            with self.subTest(adapter=adapter_name):
+                destination = self.root / adapter_name / "cleanup failure"
+                installed = run(destination, self.fake_bin, "enabled")
+                self.assertEqual(0, installed.returncode, installed.stdout)
+
+                if adapter_name in {"powershell", "pwsh"}:
+                    result = self.run_powershell_cleanup_failure(
+                        shutil.which(adapter_name) or adapter_name,
+                        destination,
+                    )
+                else:
+                    failing_bin = self.root / adapter_name / "failing cleanup bin"
+                    self.write_failing_cleanup(failing_bin)
+                    result = run(destination, failing_bin, "missing-cli")
+
+                self.assertEqual(0, result.returncode, result.stdout)
+                self.assertIn("could not remove transaction", result.stdout)
                 self.assert_source_parity(destination)
 
     def test_source_and_alias_guards(self) -> None:
