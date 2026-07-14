@@ -17,6 +17,10 @@ native request_user_input unavailable
 The skill is installed correctly when it reaches this audit. The failure means
 the host did not register the native input tool for that Default session.
 
+When the tool is available, an empty return is not an approval and has no retry
+limit. The skill must immediately reissue the same native control while the task
+remains active; it must not fall back to a prose question after three attempts.
+
 The confirmed configuration signal is:
 
 ```powershell
@@ -26,6 +30,12 @@ codex features list | Select-String "default_mode_request_user_input"
 ```text
 default_mode_request_user_input  under development  false
 ```
+
+This capability is intentionally detected by name and effective state rather
+than by a guessed minimum Codex version. A Linux Codex desktop task directly
+observed it as enabled with `codex-cli 0.144.1` on 2026-07-14; that is not
+Windows client evidence. The feature remains marked `under development`, so
+every Windows client must pass the capability check directly.
 
 ## Enable it from PowerShell
 

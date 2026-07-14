@@ -51,3 +51,11 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 Source: https://github.com/nidhinjs/prompt-master
+
+## OpenAI documentation references
+
+The GPT-5.6 prompting reference is an original synthesis of facts from the
+official OpenAI Developer documentation linked in
+`skills/prompt-master-gpt5/references/openai-gpt56-prompting.md`; OpenAI
+documentation text is not redistributed verbatim. OpenAI names and marks
+remain the property of OpenAI.

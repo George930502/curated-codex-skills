@@ -4,9 +4,10 @@ A curated, production-tested collection of reusable Codex skills and workflows.
 Each skill is selected for a concrete workflow, kept auditable to its sources,
 and exercised through the platforms on which its behavior differs.
 
-> **Preview:** `v0.1.0` establishes the maintenance contract and publishes the
-> first five skills. Interfaces may evolve before `v1.0.0`; changes are tracked
-> in the [changelog](CHANGELOG.md).
+> **Preview:** `v0.1.0` established the maintenance contract. The compatible
+> `v0.1.1` update hardens upgrades and compatibility checks. Interfaces may
+> evolve before `v1.0.0`; changes are tracked in the
+> [changelog](CHANGELOG.md).
 
 ## Catalog
 
@@ -29,10 +30,12 @@ The installers target Codex's documented user skill directory,
 `$HOME/.agents/skills` (`%USERPROFILE%\.agents\skills` on Windows).
 
 The repository exercises installation and validation on GitHub-hosted Linux,
-macOS, and Windows runners. WSL and Git Bash use the same shell installer, but
-their prior manual exercise has no retained artifact; `v0.1.0` therefore makes
-no independently auditable compatibility claim for those two surfaces. Native
-approval additionally depends on the Codex host exposing `request_user_input`;
+macOS, and Windows runners with Python 3.11. A separate Ubuntu matrix runs the
+validator and tests on Python 3.10 through 3.14. Windows CI executes the shell
+installer through Git Bash and the PowerShell installer through both Windows
+PowerShell 5.1 and PowerShell 7. WSL has no retained runner artifact and is not
+an independently auditable compatibility claim. Native approval
+additionally depends on the Codex host exposing `request_user_input`;
 Windows setup is documented in
 [`docs/windows-native-input.md`](docs/windows-native-input.md).
 The evidence and limits for each surface are recorded in the
@@ -62,7 +65,12 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\install.ps1
 
 The installers copy all catalog skills and report whether
 `default_mode_request_user_input` is available and enabled. They do not change
-Codex configuration. To test an install without touching your real home, use:
+Codex configuration. Reinstalling replaces catalog-owned skill directories so
+deleted files do not linger; unrelated skill directories are preserved. Local
+edits inside a catalog-named directory are replaced, so keep custom work in a
+separately named skill. Codex detects skill changes automatically, but a restart
+may be needed if they do not appear. To test an install without touching your
+real home, use:
 
 ```bash
 SKILLS_INSTALL_DIR="$(mktemp -d)/skills" bash scripts/install.sh
@@ -84,7 +92,8 @@ python3 -m unittest discover -s tests -v
 ```
 
 On Windows, replace `python3` with `py -3`. These are the same repository checks
-run by CI. Installer smoke tests always use temporary destinations; see
+run by CI. Python 3.10 is the minimum supported version. Installer tests always
+use temporary destinations; see
 [`CONTRIBUTING.md`](CONTRIBUTING.md) for the full contribution gate.
 
 ## Project contract

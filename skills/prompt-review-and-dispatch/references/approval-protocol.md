@@ -32,13 +32,17 @@ re-auditing. Polishing receives this complete record, not a prose summary.
 Use `list_threads` to find the active Codex task and `read_thread` when needed
 to match the current request. Store its thread ID, host ID, and title. If more
 than one candidate remains, resolve the choice with native input. A title alone
-is not identity.
+is not identity. If `list_threads`, or `read_thread` when needed, is unavailable,
+set `state: blocked` and retain the draft. Do not guess an identity or substitute
+a manually supplied title or ID.
 
 ## Approval
 
 After displaying the full draft and destination, run the approval gate defined
 in the native-input contract. Approval authorizes only the displayed bytes and
-destination. On `不同意`, run the native rejection gate and store its selected
+destination. `awaiting-approval` remains a tool-backed native stage until an
+option is selected; it has no attempt counter and cannot return control to a
+prose-input prompt. On `不同意`, run the native rejection gate and store its selected
 category or `Other` text verbatim in `rejection_reason`. Approval-gate `Other`
 is already the verbatim reason. Then clear the rejected draft and return that
 reason to grilling.

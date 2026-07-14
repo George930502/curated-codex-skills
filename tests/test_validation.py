@@ -28,6 +28,17 @@ class ValidationTests(unittest.TestCase):
         failures = [error for skill in skills if skill.is_dir() for error in validate.validate_skill(skill)]
         self.assertEqual([], failures)
 
+    def test_packaged_comparison_includes_empty_directories(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source"
+            candidate = Path(temporary) / "candidate"
+            (source / "empty").mkdir(parents=True)
+            candidate.mkdir()
+
+            self.assertTrue(validate.compare_packaged_skill(source, candidate))
+            (candidate / "empty").mkdir()
+            self.assertEqual([], validate.compare_packaged_skill(source, candidate))
+
     def test_directory_name_must_match_skill_name(self) -> None:
         self.assert_skill_error(
             "wrong-name",

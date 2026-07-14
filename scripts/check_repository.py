@@ -28,8 +28,15 @@ REQUIRED_FILES = (
     "docs/agents/issue-tracker.md",
     "docs/compatibility.md",
     "docs/releasing.md",
+    "docs/testing-strategy.md",
 )
 USES = re.compile(r"(?m)^\s*uses:\s*[^@\s]+@(?P<ref>[^\s#]+)")
+NATIVE_RETRY_LIFECYCLE = (
+    "If `request_user_input` returns without a selected option while the task is still "
+    "active, immediately call it again with the same question and options. Repeat "
+    "without a retry limit; do not finish the turn in an awaiting state that requires "
+    "a prose reply."
+)
 
 
 def markdown_files() -> list[Path]:
@@ -71,7 +78,8 @@ def check_identity() -> list[str]:
 
 def check_workflows() -> list[str]:
     errors: list[str] = []
-    for path in sorted((ROOT / ".github" / "workflows").glob("*.yml")):
+    workflow_root = ROOT / ".github" / "workflows"
+    for path in sorted((*workflow_root.glob("*.yml"), *workflow_root.glob("*.yaml"))):
         text = path.read_text(encoding="utf-8")
         if not re.search(r"(?m)^permissions:\s*$", text):
             errors.append(f"{path.relative_to(ROOT)}: missing explicit permissions")
@@ -80,6 +88,8 @@ def check_workflows() -> list[str]:
                 errors.append(
                     f"{path.relative_to(ROOT)}: action is not pinned to a full commit SHA"
                 )
+        if "actions/checkout@" in text and "persist-credentials: false" not in text:
+            errors.append(f"{path.relative_to(ROOT)}: checkout must disable credential persistence")
     return errors
 
 
@@ -93,10 +103,68 @@ def check_install_destinations() -> list[str]:
         errors.append("scripts/install.ps1: user destination or test override is missing")
     if ".codex/skills" in shell or ".codex\\skills" in powershell:
         errors.append("installers must use the documented .agents/skills destination")
+    for guard in (
+        "Refusing to install skills into the filesystem root",
+        "Refusing to install into the packaged source catalog",
+        "Refusing to install through an unresolved parent segment",
+    ):
+        if guard not in shell or guard not in powershell:
+            errors.append(f"installers must both enforce safety guard: {guard}")
+    return errors
+
+
+def has_canonical_native_retry_lifecycle(contract: str) -> bool:
+    return NATIVE_RETRY_LIFECYCLE in " ".join(contract.split())
+
+
+def check_native_input_contract() -> list[str]:
+    contract_path = ROOT / "skills" / "grilling" / "NATIVE-INPUT.md"
+    if not contract_path.is_file():
+        return [f"missing required file: {contract_path.relative_to(ROOT)}"]
+    contract = contract_path.read_text(encoding="utf-8")
+    required = (
+        "request_user_input",
+        "autoResolutionMs",
+        "- Grilling:",
+        "- Alignment:",
+        "- Approval:",
+        "- Rejection:",
+        "Only the host stopping the task",
+    )
+    errors = [
+        f"{contract_path.relative_to(ROOT)}: missing required native-input rule {rule!r}"
+        for rule in required
+        if rule not in contract
+    ]
+    if not has_canonical_native_retry_lifecycle(contract):
+        errors.append(
+            f"{contract_path.relative_to(ROOT)}: native retry lifecycle must match the canonical contract"
+        )
+    consumers = (
+        "skills/domain-modeling/SKILL.md",
+        "skills/grill-with-docs/SKILL.md",
+        "skills/grilling/SKILL.md",
+        "skills/prompt-master-gpt5/SKILL.md",
+        "skills/prompt-review-and-dispatch/SKILL.md",
+        "skills/prompt-review-and-dispatch/references/approval-protocol.md",
+    )
+    for relative in consumers:
+        path = ROOT / relative
+        if not path.is_file():
+            errors.append(f"missing required file: {relative}")
+        elif "NATIVE-INPUT.md" not in path.read_text(encoding="utf-8"):
+            errors.append(f"{relative}: must reference the native-input contract")
+    approval_path = ROOT / consumers[-1]
+    if approval_path.is_file():
+        approval = approval_path.read_text(encoding="utf-8")
+        for rule in ("list_threads", "read_thread", "state: blocked", "Do not guess an identity"):
+            if rule not in approval:
+                errors.append(f"{consumers[-1]}: missing destination-identity rule {rule!r}")
     return errors
 
 
 def main() -> int:
+    version_file = ROOT / "VERSION"
     errors = [
         f"missing required file: {relative}"
         for relative in REQUIRED_FILES
@@ -106,9 +174,12 @@ def main() -> int:
     errors.extend(check_identity())
     errors.extend(check_workflows())
     errors.extend(check_install_destinations())
-    version = (ROOT / "VERSION").read_text(encoding="utf-8").strip() if (ROOT / "VERSION").is_file() else ""
+    errors.extend(check_native_input_contract())
+    version = version_file.read_text(encoding="utf-8").strip() if version_file.is_file() else ""
     if not re.fullmatch(r"\d+\.\d+\.\d+", version):
         errors.append("VERSION must contain one SemVer core version")
+    elif not (ROOT / "docs" / "specs" / f"production-v{version}.md").is_file():
+        errors.append(f"missing release spec for VERSION {version}")
     for error in errors:
         print(error, file=sys.stderr)
     print(f"REPOSITORY_CHECK_FAILED_COUNT={len(errors)}")

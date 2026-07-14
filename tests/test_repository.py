@@ -27,6 +27,19 @@ class RepositoryTests(unittest.TestCase):
     def test_installers_use_documented_isolatable_destination(self) -> None:
         self.assertEqual([], checks.check_install_destinations())
 
+    def test_native_decisions_share_one_enforced_contract(self) -> None:
+        self.assertEqual([], checks.check_native_input_contract())
+
+    def test_native_retry_contract_rejects_negation(self) -> None:
+        contract = (ROOT / "skills" / "grilling" / "NATIVE-INPUT.md").read_text(
+            encoding="utf-8"
+        )
+        negated = contract.replace(
+            "Repeat without a retry limit",
+            "Do not repeat without a retry limit",
+        )
+        self.assertFalse(checks.has_canonical_native_retry_lifecycle(negated))
+
     def test_skill_catalog_matches_directories(self) -> None:
         readme = (ROOT / "README.md").read_text(encoding="utf-8")
         skills = sorted(path.name for path in (ROOT / "skills").iterdir() if path.is_dir())
