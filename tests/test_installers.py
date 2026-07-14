@@ -814,6 +814,15 @@ if "%CODEX_SCENARIO%"=="enabled-crlf" echo default_mode_request_user_input  unde
                     self.assertEqual(0, triple_slash.returncode, triple_slash.stdout)
                     self.assert_source_parity(triple_destination)
 
+                    outside_destination = self.root / adapter_name / "outside symlink destination"
+                    outside_destination.mkdir()
+                    destination_symlink = self.root / adapter_name / "destination symlink"
+                    self.make_directory_link(destination_symlink, outside_destination)
+                    symlink_result = run(destination_symlink, self.fake_bin, "enabled")
+                    self.assertNotEqual(0, symlink_result.returncode, symlink_result.stdout)
+                    self.assertIn("filesystem alias", symlink_result.stdout)
+                    self.assertEqual([], list(outside_destination.iterdir()))
+
                 if adapter_name in {"bash", "git-bash"}:
                     base = self.root / adapter_name / "dot segment guard"
                     base.mkdir(parents=True)
@@ -927,27 +936,24 @@ if "%CODEX_SCENARIO%"=="enabled-crlf" echo default_mode_request_user_input  unde
                     self.assertNotEqual(0, guarded_triple_slash.returncode, guarded_triple_slash.stdout)
                     self.assertIn("Refusing to install into the packaged source catalog", guarded_triple_slash.stdout)
 
-                source_alias_message = (
-                    "Refusing to install through a filesystem alias"
-                    if adapter_name in {"powershell", "pwsh"}
-                    else "Refusing to install into the packaged source catalog"
-                )
                 repository_alias = self.root / adapter_name / "repository alias"
                 self.make_directory_link(repository_alias, sandbox)
-                aliased_source = run(sandbox / "skills", self.fake_bin, "enabled", repository_alias)
+                repository_alias_destination = self.root / adapter_name / "repository alias install"
+                aliased_source = run(
+                    repository_alias_destination,
+                    self.fake_bin,
+                    "enabled",
+                    repository_alias,
+                )
                 self.assertNotEqual(0, aliased_source.returncode, aliased_source.stdout)
-                self.assertIn(source_alias_message, aliased_source.stdout)
+                self.assertIn("filesystem alias", aliased_source.stdout)
+                self.assertFalse(repository_alias_destination.exists(), aliased_source.stdout)
 
                 destination_alias = sandbox / "source alias"
                 self.make_directory_link(destination_alias, sandbox / "skills")
                 aliased = run(destination_alias, self.fake_bin, "enabled", sandbox)
                 self.assertNotEqual(0, aliased.returncode, aliased.stdout)
-                destination_alias_message = (
-                    "Refusing to install through a filesystem alias"
-                    if adapter_name in {"powershell", "pwsh", "git-bash"}
-                    else "Refusing to install into the packaged source catalog"
-                )
-                self.assertIn(destination_alias_message, aliased.stdout)
+                self.assertIn("Refusing to install through a filesystem alias", aliased.stdout)
                 self.assertTrue((sandbox / "skills" / "prompt-review-and-dispatch" / "SKILL.md").is_file())
 
                 if adapter_name in {"bash", "git-bash"}:

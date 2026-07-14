@@ -1,7 +1,13 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd -P)
+script_dir_requested=$(dirname -- "$0")
+script_dir_logical=$(CDPATH= cd -- "$script_dir_requested" && pwd -L)
+script_dir=$(CDPATH= cd -- "$script_dir_requested" && pwd -P)
+if [ "$script_dir_logical" != "$script_dir" ]; then
+    printf 'Refusing to install from a filesystem alias.\n' >&2
+    exit 2
+fi
 repo_root=$(CDPATH= cd -- "$script_dir/.." && pwd -P)
 source_catalog_requested="$repo_root/skills"
 destination=${SKILLS_INSTALL_DIR:-"$HOME/.agents/skills"}
@@ -231,7 +237,13 @@ while [ ! -d "$existing" ]; do
     existing=$parent
 done
 assert_no_windows_reparse_path "$existing"
-existing=$(CDPATH= cd -- "$existing" && pwd -P)
+existing_logical=$(CDPATH= cd -- "$existing" && pwd -L)
+existing_physical=$(CDPATH= cd -- "$existing" && pwd -P)
+if [ "$existing_logical" != "$existing_physical" ]; then
+    printf 'Refusing to install through a filesystem alias.\n' >&2
+    exit 2
+fi
+existing=$existing_physical
 for inspected_path in "$source_catalog" "$existing"; do
     if is_subst_path "$inspected_path"; then
         printf 'Refusing to install through a filesystem alias.\n' >&2
