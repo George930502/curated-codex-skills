@@ -644,6 +644,55 @@ if "%CODEX_SCENARIO%"=="enabled-crlf" echo default_mode_request_user_input  unde
                     self.assertFalse(list(destination.glob(".*.install.*")), recovered.stdout)
                 self.assert_source_parity(destination)
 
+    def test_transaction_recovery_rejects_ambiguous_or_forged_state(self) -> None:
+        for adapter_name, run in self.adapters():
+            with self.subTest(adapter=adapter_name):
+                destination = self.root / adapter_name / "adversarial recovery"
+                installed = run(destination, self.fake_bin, "enabled")
+                self.assertEqual(0, installed.returncode, installed.stdout)
+                first_skill = sorted(path.name for path in (ROOT / "skills").iterdir() if path.is_dir())[0]
+                target = destination / first_skill
+
+                nonexact = destination / f".{first_skill}.install.nonexact"
+                nonexact.mkdir()
+                (nonexact / TRANSACTION_MARKER).write_bytes(f"{first_skill}\nextra\n".encode())
+                unrelated = nonexact / "preserve.txt"
+                unrelated.write_text("user owned", encoding="utf-8")
+                ignored = run(destination, self.fake_bin, "enabled")
+                self.assertEqual(0, ignored.returncode, ignored.stdout)
+                self.assertTrue(unrelated.is_file(), ignored.stdout)
+                shutil.rmtree(nonexact)
+
+                outside = self.root / adapter_name / "forged transaction target"
+                (outside / "old").mkdir(parents=True)
+                sentinel = outside / "old" / "preserve.txt"
+                sentinel.write_text("outside", encoding="utf-8")
+                (outside / TRANSACTION_MARKER).write_bytes(f"{first_skill}\r\n".encode())
+                transaction_alias = destination / f".{first_skill}.install.forged"
+                self.make_directory_link(transaction_alias, outside)
+                forged = run(destination, self.fake_bin, "enabled")
+                self.assertNotEqual(0, forged.returncode, forged.stdout)
+                self.assertIn("transaction filesystem alias", forged.stdout)
+                self.assertTrue(sentinel.is_file(), forged.stdout)
+                if transaction_alias.is_symlink():
+                    transaction_alias.unlink()
+                else:
+                    os.rmdir(transaction_alias)
+
+                older = destination / f".{first_skill}.install.aaaaaa"
+                newer = destination / f".{first_skill}.install.zzzzzz"
+                older.mkdir()
+                shutil.move(str(target), str(older / "old"))
+                shutil.copytree(older / "old", newer / "old")
+                (older / TRANSACTION_MARKER).write_bytes(f"{first_skill}\n".encode())
+                (newer / TRANSACTION_MARKER).write_bytes(f"{first_skill}\r\n".encode())
+                ambiguous = run(destination, self.fake_bin, "enabled")
+                self.assertNotEqual(0, ambiguous.returncode, ambiguous.stdout)
+                self.assertIn("refusing ambiguous recovery", ambiguous.stdout)
+                self.assertFalse(target.exists(), ambiguous.stdout)
+                self.assertTrue((older / "old").is_dir(), ambiguous.stdout)
+                self.assertTrue((newer / "old").is_dir(), ambiguous.stdout)
+
     def test_source_and_alias_guards(self) -> None:
         for adapter_name, run in self.adapters():
             with self.subTest(adapter=adapter_name):

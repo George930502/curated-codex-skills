@@ -125,6 +125,25 @@ assert_no_windows_reparse_path() {
     return 2
 }
 
+transaction_marker_matches() {
+    marker_path=$1
+    expected_name=$2
+    marker_name=
+    extra_line=
+    exec 3< "$marker_path"
+    if ! IFS= read -r marker_name <&3; then
+        exec 3<&-
+        return 1
+    fi
+    if IFS= read -r extra_line <&3 || [ -n "$extra_line" ]; then
+        exec 3<&-
+        return 1
+    fi
+    exec 3<&-
+    marker_name=${marker_name%$'\r'}
+    [ "$marker_name" = "$expected_name" ]
+}
+
 if is_filesystem_root "$destination"; then
     printf 'Refusing to install skills into the filesystem root.\n' >&2
     exit 2
@@ -178,25 +197,45 @@ for skill in "$source_catalog"/*; do
     [ -d "$skill" ] || continue
     name=${skill##*/}
     target="$destination/$name"
+    valid_transactions=()
+    backup_transactions=()
     for stale_transaction in "$destination/.$name.install."*; do
         marker="$stale_transaction/.curated-codex-skills-transaction"
-        transaction_name=
-        if [ -d "$stale_transaction" ] && [ -f "$marker" ] &&
-            IFS= read -r transaction_name < "$marker"; then
-            transaction_name=${transaction_name%$'\r'}
-            if [ "$transaction_name" = "$name" ]; then
-                stale_backup="$stale_transaction/old"
-                if [ ! -e "$target" ] && [ ! -L "$target" ] &&
-                    { [ -e "$stale_backup" ] || [ -L "$stale_backup" ]; }; then
-                    if ! mv "$stale_backup" "$target"; then
-                        printf 'Could not restore interrupted transaction %s.\n' "$stale_transaction" >&2
-                        exit 2
-                    fi
-                fi
-                if ! rm -rf "$stale_transaction"; then
-                    printf 'Warning: could not remove stale transaction %s.\n' "$stale_transaction" >&2
-                fi
+        [ -e "$stale_transaction" ] || [ -L "$stale_transaction" ] || continue
+        if [ -L "$stale_transaction" ]; then
+            printf 'Refusing to recover through a transaction filesystem alias.\n' >&2
+            exit 2
+        fi
+        if [ -n "${MSYSTEM:-}" ]; then
+            if assert_no_windows_reparse_path "$stale_transaction"; then
+                :
+            else
+                exit $?
             fi
+        fi
+        [ -d "$stale_transaction" ] && [ -f "$marker" ] || continue
+        transaction_marker_matches "$marker" "$name" || continue
+        valid_transactions+=("$stale_transaction")
+        stale_backup="$stale_transaction/old"
+        if [ -e "$stale_backup" ] || [ -L "$stale_backup" ]; then
+            backup_transactions+=("$stale_transaction")
+        fi
+    done
+    if [ ! -e "$target" ] && [ ! -L "$target" ] && [ "${#backup_transactions[@]}" -gt 1 ]; then
+        printf 'Multiple interrupted transactions exist for %s; refusing ambiguous recovery.\n' "$name" >&2
+        exit 2
+    fi
+    for stale_transaction in "${valid_transactions[@]}"; do
+        stale_backup="$stale_transaction/old"
+        if [ ! -e "$target" ] && [ ! -L "$target" ] &&
+            { [ -e "$stale_backup" ] || [ -L "$stale_backup" ]; }; then
+            if ! mv "$stale_backup" "$target"; then
+                printf 'Could not restore interrupted transaction %s.\n' "$stale_transaction" >&2
+                exit 2
+            fi
+        fi
+        if ! rm -rf "$stale_transaction"; then
+            printf 'Warning: could not remove stale transaction %s.\n' "$stale_transaction" >&2
         fi
     done
     transaction=$(mktemp -d "$destination/.$name.install.XXXXXX")

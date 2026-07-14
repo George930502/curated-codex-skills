@@ -110,26 +110,45 @@ if (Test-PathAtOrBelow $destination $source) {
 $skills = @(Get-ChildItem -LiteralPath $source -Directory)
 foreach ($skill in $skills) {
     $target = Join-Path $destination $skill.Name
+    $validTransactions = @()
+    $backupTransactions = @()
     foreach ($staleTransaction in @(Get-ChildItem -LiteralPath $destination -Directory -Force -Filter ('.{0}.install.*' -f $skill.Name))) {
         $marker = Join-Path $staleTransaction.FullName '.curated-codex-skills-transaction'
-        if (-not ($staleTransaction.Attributes -band [System.IO.FileAttributes]::ReparsePoint) -and
-            (Test-Path -LiteralPath $marker -PathType Leaf) -and
-            (Get-Content -LiteralPath $marker -Raw).TrimEnd("`r", "`n") -eq $skill.Name) {
-            $staleBackup = Join-Path $staleTransaction.FullName 'old'
-            $targetExists = $null -ne (Get-Item -LiteralPath $target -Force -ErrorAction SilentlyContinue)
-            $backupExists = $null -ne (Get-Item -LiteralPath $staleBackup -Force -ErrorAction SilentlyContinue)
-            if (-not $targetExists -and $backupExists) {
-                try {
-                    Move-Item -LiteralPath $staleBackup -Destination $target
-                } catch {
-                    throw "Could not restore interrupted transaction $($staleTransaction.FullName)."
-                }
-            }
+        if ($staleTransaction.Attributes -band [System.IO.FileAttributes]::ReparsePoint) {
+            throw 'Refusing to recover through a transaction filesystem alias.'
+        }
+        if (-not (Test-Path -LiteralPath $marker -PathType Leaf)) {
+            continue
+        }
+        $markerContent = [System.IO.File]::ReadAllText($marker)
+        if ($markerContent -ne ($skill.Name + "`n") -and $markerContent -ne ($skill.Name + "`r`n")) {
+            continue
+        }
+        $validTransactions += $staleTransaction
+        $staleBackup = Join-Path $staleTransaction.FullName 'old'
+        if ($null -ne (Get-Item -LiteralPath $staleBackup -Force -ErrorAction SilentlyContinue)) {
+            $backupTransactions += $staleTransaction
+        }
+    }
+    $targetExists = $null -ne (Get-Item -LiteralPath $target -Force -ErrorAction SilentlyContinue)
+    if (-not $targetExists -and $backupTransactions.Count -gt 1) {
+        throw "Multiple interrupted transactions exist for $($skill.Name); refusing ambiguous recovery."
+    }
+    foreach ($staleTransaction in $validTransactions) {
+        $staleBackup = Join-Path $staleTransaction.FullName 'old'
+        $targetExists = $null -ne (Get-Item -LiteralPath $target -Force -ErrorAction SilentlyContinue)
+        $backupExists = $null -ne (Get-Item -LiteralPath $staleBackup -Force -ErrorAction SilentlyContinue)
+        if (-not $targetExists -and $backupExists) {
             try {
-                Remove-Entry $staleTransaction.FullName
+                Move-Item -LiteralPath $staleBackup -Destination $target
             } catch {
-                Write-Warning "Could not remove stale transaction $($staleTransaction.FullName)."
+                throw "Could not restore interrupted transaction $($staleTransaction.FullName)."
             }
+        }
+        try {
+            Remove-Entry $staleTransaction.FullName
+        } catch {
+            Write-Warning "Could not remove stale transaction $($staleTransaction.FullName)."
         }
     }
     $transaction = Join-Path $destination ('.{0}.install.{1}' -f $skill.Name, [guid]::NewGuid())
