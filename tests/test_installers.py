@@ -497,6 +497,23 @@ if "%CODEX_SCENARIO%"=="enabled" echo default_mode_request_user_input  under dev
                 sandbox = self.root / adapter_name / "guard repo"
                 shutil.copytree(ROOT / "scripts", sandbox / "scripts")
                 shutil.copytree(ROOT / "skills", sandbox / "skills")
+
+                aliased_catalog_repo = self.root / adapter_name / "aliased catalog repo"
+                shutil.copytree(ROOT / "scripts", aliased_catalog_repo / "scripts")
+                actual_catalog = self.root / adapter_name / "actual source catalog"
+                shutil.copytree(ROOT / "skills", actual_catalog)
+                self.make_directory_link(aliased_catalog_repo / "skills", actual_catalog)
+                source_alias_destination = actual_catalog / "nested destination"
+                source_alias_result = run(
+                    source_alias_destination,
+                    self.fake_bin,
+                    "enabled",
+                    aliased_catalog_repo,
+                )
+                self.assertNotEqual(0, source_alias_result.returncode, source_alias_result.stdout)
+                self.assertIn("filesystem alias", source_alias_result.stdout)
+                self.assertFalse(source_alias_destination.exists())
+
                 nested = sandbox / "skills" / "new destination"
                 guarded_nested = run(nested, self.fake_bin, "enabled", sandbox)
                 self.assertNotEqual(0, guarded_nested.returncode, guarded_nested.stdout)

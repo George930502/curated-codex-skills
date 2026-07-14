@@ -3,7 +3,7 @@ set -euo pipefail
 
 script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd -P)
 repo_root=$(CDPATH= cd -- "$script_dir/.." && pwd -P)
-source_catalog="$repo_root/skills"
+source_catalog_requested="$repo_root/skills"
 destination=${SKILLS_INSTALL_DIR:-"$HOME/.agents/skills"}
 
 case "/$destination/" in
@@ -87,6 +87,13 @@ assert_no_windows_reparse_path() {
     fi
     return 2
 }
+
+assert_no_windows_reparse_path "$source_catalog_requested"
+source_catalog=$(CDPATH= cd -- "$source_catalog_requested" && pwd -P)
+if [ "$source_catalog_requested" != "$source_catalog" ]; then
+    printf 'Refusing to install from a filesystem alias.\n' >&2
+    exit 2
+fi
 
 existing=$destination
 while [ ! -d "$existing" ]; do
