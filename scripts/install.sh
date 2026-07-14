@@ -128,20 +128,10 @@ assert_no_windows_reparse_path() {
 transaction_marker_matches() {
     marker_path=$1
     expected_name=$2
-    marker_name=
-    extra_line=
-    exec 3< "$marker_path"
-    if ! IFS= read -r marker_name <&3; then
-        exec 3<&-
-        return 1
+    if printf '%s\n' "$expected_name" | cmp -s - "$marker_path"; then
+        return 0
     fi
-    if IFS= read -r extra_line <&3 || [ -n "$extra_line" ]; then
-        exec 3<&-
-        return 1
-    fi
-    exec 3<&-
-    marker_name=${marker_name%$'\r'}
-    [ "$marker_name" = "$expected_name" ]
+    printf '%s\r\n' "$expected_name" | cmp -s - "$marker_path"
 }
 
 if is_filesystem_root "$destination"; then

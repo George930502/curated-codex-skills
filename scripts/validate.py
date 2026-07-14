@@ -4,8 +4,10 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 from pathlib import Path
 import re
+import stat
 import sys
 
 
@@ -160,17 +162,26 @@ def validate_skill(skill: Path) -> list[str]:
 
 def compare_packaged_skill(source: Path, candidate: Path) -> list[str]:
     """Require an installed catalog skill to match its packaged source exactly."""
-    source_files = {
-        path.relative_to(source): path.read_bytes()
-        for path in source.rglob("*")
-        if path.is_file()
-    }
-    candidate_files = {
-        path.relative_to(candidate): path.read_bytes()
-        for path in candidate.rglob("*")
-        if path.is_file()
-    }
-    if source_files == candidate_files:
+    def manifest(root: Path) -> dict[Path, tuple[str, bytes | str | None]]:
+        entries: dict[Path, tuple[str, bytes | str | None]] = {}
+        for path in root.rglob("*"):
+            relative = path.relative_to(root)
+            metadata = path.lstat()
+            if path.is_symlink() or getattr(metadata, "st_file_attributes", 0) & 0x400:
+                try:
+                    target: str | None = os.readlink(path)
+                except OSError:
+                    target = None
+                entries[relative] = ("alias", target)
+            elif stat.S_ISDIR(metadata.st_mode):
+                entries[relative] = ("directory", None)
+            elif stat.S_ISREG(metadata.st_mode):
+                entries[relative] = ("file", path.read_bytes())
+            else:
+                entries[relative] = ("other", None)
+        return entries
+
+    if manifest(source) == manifest(candidate):
         return []
     return [f"{candidate}: installed content differs from packaged source"]
 

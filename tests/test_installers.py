@@ -665,6 +665,20 @@ if "%CODEX_SCENARIO%"=="enabled-crlf" echo default_mode_request_user_input  unde
                 self.assertTrue(unrelated.is_file(), ignored.stdout)
                 shutil.rmtree(nonexact)
 
+                for suffix, marker_bytes in (
+                    ("nul-before-newline", f"{first_skill}\0\n".encode()),
+                    ("nul-after-newline", f"{first_skill}\n\0".encode()),
+                ):
+                    binary_marker = destination / f".{first_skill}.install.{suffix}"
+                    binary_marker.mkdir()
+                    (binary_marker / TRANSACTION_MARKER).write_bytes(marker_bytes)
+                    binary_sentinel = binary_marker / "preserve.txt"
+                    binary_sentinel.write_text("user owned", encoding="utf-8")
+                    ignored = run(destination, self.fake_bin, "enabled")
+                    self.assertEqual(0, ignored.returncode, ignored.stdout)
+                    self.assertTrue(binary_sentinel.is_file(), ignored.stdout)
+                    shutil.rmtree(binary_marker)
+
                 outside = self.root / adapter_name / "forged transaction target"
                 (outside / "old").mkdir(parents=True)
                 sentinel = outside / "old" / "preserve.txt"
