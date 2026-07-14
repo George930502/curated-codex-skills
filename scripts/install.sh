@@ -57,12 +57,17 @@ is_filesystem_root() {
 assert_no_windows_reparse_path() {
     [ -n "${MSYSTEM:-}" ] || return 0
     command -v cygpath >/dev/null 2>&1 || return 0
-    command -v powershell.exe >/dev/null 2>&1 || {
+    powershell_path=$(command -v powershell.exe 2>/dev/null || true)
+    if [ -z "$powershell_path" ]; then
+        windows_root=${SystemRoot:-${SYSTEMROOT:-C:\\Windows}}
+        powershell_path=$(cygpath -u "$windows_root")/System32/WindowsPowerShell/v1.0/powershell.exe
+    fi
+    [ -x "$powershell_path" ] || {
         printf 'Cannot inspect Windows filesystem aliases without powershell.exe.\n' >&2
         return 2
     }
     windows_path=$(cygpath -w "$1")
-    if REPARSE_CHECK_PATH=$windows_path powershell.exe -NoProfile -NonInteractive -Command '
+    if REPARSE_CHECK_PATH=$windows_path "$powershell_path" -NoProfile -NonInteractive -Command '
         $full = [IO.Path]::GetFullPath($env:REPARSE_CHECK_PATH)
         $current = [IO.Path]::GetPathRoot($full)
         foreach ($part in $full.Substring($current.Length) -split "[\\/]") {

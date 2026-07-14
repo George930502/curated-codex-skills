@@ -509,7 +509,7 @@ if "%CODEX_SCENARIO%"=="enabled" echo default_mode_request_user_input  under dev
 
                 alias_message = (
                     "Refusing to install through a filesystem alias"
-                    if adapter_name in {"powershell", "pwsh"}
+                    if adapter_name in {"powershell", "pwsh", "git-bash"}
                     else "Refusing to install into the packaged source catalog"
                 )
                 repository_alias = self.root / adapter_name / "repository alias"
