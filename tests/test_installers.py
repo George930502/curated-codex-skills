@@ -73,6 +73,16 @@ if "%CODEX_SCENARIO%"=="enabled" echo default_mode_request_user_input  under dev
         command.write_text("#!/usr/bin/env sh\nexit 9\n", encoding="ascii")
         command.chmod(0o755)
 
+    def write_drive_root_probe(self, directory: Path) -> None:
+        self.write_fake_codex(directory)
+        command = directory / "cygpath"
+        command.write_text(
+            "#!/usr/bin/env sh\n"
+            "if [ \"$1\" = -w ]; then printf 'C:\\\\\n'; else exit 2; fi\n",
+            encoding="ascii",
+        )
+        command.chmod(0o755)
+
     def run_powershell_copy_failure(
         self,
         executable: str,
@@ -412,6 +422,16 @@ if "%CODEX_SCENARIO%"=="enabled" echo default_mode_request_user_input  under dev
                     )
                     self.assertNotEqual(0, substituted_destination.returncode, substituted_destination.stdout)
                     self.assertIn("Refusing to install through a filesystem alias", substituted_destination.stdout)
+
+                    if adapter_name == "git-bash":
+                        probe_bin = self.root / adapter_name / "drive root probe"
+                        self.write_drive_root_probe(probe_bin)
+                        isolated_root = self.root / adapter_name / "isolated drive root"
+                        isolated_root.mkdir()
+                        drive_root = run(isolated_root, probe_bin, "enabled")
+                        self.assertNotEqual(0, drive_root.returncode, drive_root.stdout)
+                        self.assertIn("Refusing to install skills into the filesystem root", drive_root.stdout)
+                        self.assertEqual([], list(isolated_root.iterdir()))
 
     def test_capability_diagnostics(self) -> None:
         for adapter_name, run in self.adapters():

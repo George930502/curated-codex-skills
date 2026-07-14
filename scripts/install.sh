@@ -18,6 +18,16 @@ is_subst_path() {
     esac
 }
 
+is_filesystem_root() {
+    [ "$1" = / ] && return 0
+    command -v cygpath >/dev/null 2>&1 || return 1
+    root_path=$(cygpath -w "$1")
+    case "$root_path" in
+        [A-Za-z]:\\) return 0 ;;
+        *) return 1 ;;
+    esac
+}
+
 existing=$destination
 while [ ! -d "$existing" ]; do
     parent=$(dirname -- "$existing")
@@ -37,7 +47,7 @@ case "$existing/" in
 esac
 mkdir -p "$destination"
 destination=$(CDPATH= cd -- "$destination" && pwd -P)
-if [ "$destination" = / ]; then
+if is_filesystem_root "$destination"; then
     printf 'Refusing to install skills into the filesystem root.\n' >&2
     exit 2
 fi
