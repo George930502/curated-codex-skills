@@ -142,6 +142,7 @@ def check_native_input_contract() -> list[str]:
         )
     consumers = (
         "skills/domain-modeling/SKILL.md",
+        "skills/grill-with-docs/SKILL.md",
         "skills/grilling/SKILL.md",
         "skills/prompt-master-gpt5/SKILL.md",
         "skills/prompt-review-and-dispatch/SKILL.md",
