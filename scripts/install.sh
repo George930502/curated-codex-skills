@@ -57,7 +57,7 @@ is_filesystem_root() {
 resolve_unaliased_windows_directory() {
     logical=$(CDPATH= cd -- "$1" && pwd -L)
     physical=$(CDPATH= cd -- "$1" && pwd -P)
-    if command -v cygpath >/dev/null 2>&1 && [ "$logical" != "$physical" ]; then
+    if [ -n "${MSYSTEM:-}" ] && command -v cygpath >/dev/null 2>&1 && [ "$logical" != "$physical" ]; then
         printf 'Refusing to install through a filesystem alias.\n' >&2
         return 2
     fi
