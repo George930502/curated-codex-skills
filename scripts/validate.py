@@ -171,17 +171,13 @@ def compare_packaged_skill(source: Path, candidate: Path) -> list[str]:
     if root_is_alias(source) or root_is_alias(candidate):
         return [f"{candidate}: installed content differs from packaged source"]
 
-    def manifest(root: Path) -> dict[Path, tuple[str, bytes | str | None]]:
-        entries: dict[Path, tuple[str, bytes | str | None]] = {}
+    def manifest(root: Path) -> dict[Path, tuple[str, bytes | None]] | None:
+        entries: dict[Path, tuple[str, bytes | None]] = {}
         for path in root.rglob("*"):
             relative = path.relative_to(root)
             metadata = path.lstat()
             if path.is_symlink() or getattr(metadata, "st_file_attributes", 0) & 0x400:
-                try:
-                    target: str | None = os.readlink(path)
-                except OSError:
-                    target = None
-                entries[relative] = ("alias", target)
+                return None
             elif stat.S_ISDIR(metadata.st_mode):
                 entries[relative] = ("directory", None)
             elif stat.S_ISREG(metadata.st_mode):
@@ -190,7 +186,9 @@ def compare_packaged_skill(source: Path, candidate: Path) -> list[str]:
                 entries[relative] = ("other", None)
         return entries
 
-    if manifest(source) == manifest(candidate):
+    source_manifest = manifest(source)
+    candidate_manifest = manifest(candidate)
+    if source_manifest is not None and source_manifest == candidate_manifest:
         return []
     return [f"{candidate}: installed content differs from packaged source"]
 

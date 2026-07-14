@@ -505,6 +505,16 @@ if "%CODEX_SCENARIO%"=="enabled-crlf" echo default_mode_request_user_input  unde
         self.assertNotEqual(0, result.returncode, result.stdout)
         self.assertIn("catalog filesystem alias", result.stdout)
 
+        source_tree = self.root / "parity source"
+        candidate_tree = self.root / "parity candidate"
+        source_tree.mkdir()
+        candidate_tree.mkdir()
+        source_file = source_tree / "content.txt"
+        candidate_file = candidate_tree / "content.txt"
+        source_file.write_text("same", encoding="utf-8")
+        self.make_file_link(candidate_file, source_file)
+        self.assertTrue(validate.compare_packaged_skill(source_tree, candidate_tree))
+
     def make_subst(self, target: Path) -> Path:
         for letter in "ZYXWVUTSRQPONMLKJIHGFED":
             drive = f"{letter}:"
@@ -718,6 +728,19 @@ if "%CODEX_SCENARIO%"=="enabled-crlf" echo default_mode_request_user_input  unde
                     self.assertTrue(binary_sentinel.is_file(), ignored.stdout)
                     shutil.rmtree(binary_marker)
 
+                for suffix, marker_bytes in (
+                    ("utf8-bom-lf", b"\xef\xbb\xbf" + f"{first_skill}\n".encode()),
+                    ("utf8-bom-crlf", b"\xef\xbb\xbf" + f"{first_skill}\r\n".encode()),
+                    ("utf16-lf", b"\xff\xfe" + f"{first_skill}\n".encode("utf-16le")),
+                    ("utf16-crlf", b"\xff\xfe" + f"{first_skill}\r\n".encode("utf-16le")),
+                ):
+                    legacy = destination / f".{first_skill}.install.{suffix}"
+                    legacy.mkdir()
+                    (legacy / TRANSACTION_MARKER).write_bytes(marker_bytes)
+                    recovered = run(destination, self.fake_bin, "enabled")
+                    self.assertEqual(0, recovered.returncode, recovered.stdout)
+                    self.assertFalse(legacy.exists(), recovered.stdout)
+
                 external_marker = self.root / adapter_name / "external marker"
                 external_marker.write_bytes(f"{last_skill}\n".encode())
                 marker_alias_transaction = destination / f".{last_skill}.install.marker-alias"
@@ -820,6 +843,46 @@ if "%CODEX_SCENARIO%"=="enabled-crlf" echo default_mode_request_user_input  unde
                 sandbox = self.root / adapter_name / "guard repo"
                 shutil.copytree(ROOT / "scripts", sandbox / "scripts")
                 shutil.copytree(ROOT / "skills", sandbox / "skills")
+
+                descendant_alias_repo = self.root / adapter_name / "descendant alias repo"
+                shutil.copytree(ROOT / "scripts", descendant_alias_repo / "scripts")
+                shutil.copytree(ROOT / "skills", descendant_alias_repo / "skills")
+                external_source = self.root / adapter_name / "external source file"
+                external_source.write_text("external", encoding="utf-8")
+                aliased_source_file = descendant_alias_repo / "skills" / "grilling" / "NATIVE-INPUT.md"
+                aliased_source_file.unlink()
+                self.make_file_link(aliased_source_file, external_source)
+                descendant_alias_destination = self.root / adapter_name / "descendant alias destination"
+                descendant_alias_destination.mkdir()
+                destination_sentinel = descendant_alias_destination / "preserve.txt"
+                destination_sentinel.write_text("user owned", encoding="utf-8")
+                descendant_alias_result = run(
+                    descendant_alias_destination,
+                    self.fake_bin,
+                    "enabled",
+                    descendant_alias_repo,
+                )
+                self.assertNotEqual(0, descendant_alias_result.returncode, descendant_alias_result.stdout)
+                self.assertIn("source filesystem alias", descendant_alias_result.stdout)
+                self.assertTrue(destination_sentinel.is_file(), descendant_alias_result.stdout)
+
+                skill_alias_repo = self.root / adapter_name / "skill alias repo"
+                shutil.copytree(ROOT / "scripts", skill_alias_repo / "scripts")
+                shutil.copytree(ROOT / "skills", skill_alias_repo / "skills")
+                skill_root = skill_alias_repo / "skills" / "domain-modeling"
+                external_skill = self.root / adapter_name / "external skill"
+                shutil.move(str(skill_root), external_skill)
+                self.make_directory_link(skill_root, external_skill)
+                skill_alias_destination = self.root / adapter_name / "skill alias destination"
+                skill_alias_result = run(
+                    skill_alias_destination,
+                    self.fake_bin,
+                    "enabled",
+                    skill_alias_repo,
+                )
+                self.assertNotEqual(0, skill_alias_result.returncode, skill_alias_result.stdout)
+                self.assertIn("source filesystem alias", skill_alias_result.stdout)
+                self.assertFalse(skill_alias_destination.exists(), skill_alias_result.stdout)
 
                 aliased_catalog_repo = self.root / adapter_name / "aliased catalog repo"
                 shutil.copytree(ROOT / "scripts", aliased_catalog_repo / "scripts")

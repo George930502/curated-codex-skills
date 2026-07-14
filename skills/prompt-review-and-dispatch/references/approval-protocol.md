@@ -32,7 +32,9 @@ re-auditing. Polishing receives this complete record, not a prose summary.
 Use `list_threads` to find the active Codex task and `read_thread` when needed
 to match the current request. Store its thread ID, host ID, and title. If more
 than one candidate remains, resolve the choice with native input. A title alone
-is not identity.
+is not identity. If `list_threads`, or `read_thread` when needed, is unavailable,
+set `state: blocked` and retain the draft. Do not guess an identity or substitute
+a manually supplied title or ID.
 
 ## Approval
 

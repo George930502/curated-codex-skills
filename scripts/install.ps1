@@ -108,8 +108,22 @@ function Test-TransactionMarker {
     return $false
 }
 
+function Assert-NoSourceAliases {
+    param([string]$Directory)
+
+    foreach ($entry in @(Get-ChildItem -LiteralPath $Directory -Force)) {
+        if ($entry.Attributes -band [System.IO.FileAttributes]::ReparsePoint) {
+            throw 'Refusing to install from a source filesystem alias.'
+        }
+        if ($entry.PSIsContainer) {
+            Assert-NoSourceAliases $entry.FullName
+        }
+    }
+}
+
 $repoRoot = Resolve-UnaliasedDirectory (Join-Path $PSScriptRoot '..')
 $source = Resolve-UnaliasedDirectory (Join-Path $repoRoot 'skills')
+Assert-NoSourceAliases $source
 if (@($Destination -split '[\\/]' | Where-Object { $_ -eq '..' }).Count -gt 0) {
     throw 'Refusing to install through an unresolved parent segment.'
 }

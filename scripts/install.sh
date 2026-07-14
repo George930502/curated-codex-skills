@@ -131,7 +131,55 @@ transaction_marker_matches() {
     if printf '%s\n' "$expected_name" | cmp -s - "$marker_path"; then
         return 0
     fi
-    printf '%s\r\n' "$expected_name" | cmp -s - "$marker_path"
+    if printf '%s\r\n' "$expected_name" | cmp -s - "$marker_path"; then
+        return 0
+    fi
+    if printf '\357\273\277%s\n' "$expected_name" | cmp -s - "$marker_path"; then
+        return 0
+    fi
+    if printf '\357\273\277%s\r\n' "$expected_name" | cmp -s - "$marker_path"; then
+        return 0
+    fi
+    for marker_ending in lf crlf; do
+        if {
+            printf '\377\376'
+            marker_index=0
+            while [ "$marker_index" -lt "${#expected_name}" ]; do
+                printf '%s\000' "${expected_name:$marker_index:1}"
+                marker_index=$((marker_index + 1))
+            done
+            if [ "$marker_ending" = lf ]; then
+                printf '\012\000'
+            else
+                printf '\015\000\012\000'
+            fi
+        } | cmp -s - "$marker_path"; then
+            return 0
+        fi
+    done
+    return 1
+}
+
+assert_source_tree_no_aliases() {
+    local source_directory=$1 source_entry
+    local source_entries=(
+        "$source_directory"/*
+        "$source_directory"/.[!.]*
+        "$source_directory"/..?*
+    )
+    for source_entry in "${source_entries[@]}"; do
+        [ -e "$source_entry" ] || [ -L "$source_entry" ] || continue
+        if [ -L "$source_entry" ]; then
+            printf 'Refusing to install from a source filesystem alias.\n' >&2
+            return 2
+        fi
+        if [ -n "${MSYSTEM:-}" ]; then
+            assert_no_windows_reparse_path "$source_entry" || return $?
+        fi
+        if [ -d "$source_entry" ]; then
+            assert_source_tree_no_aliases "$source_entry" || return $?
+        fi
+    done
 }
 
 if is_filesystem_root "$destination"; then
@@ -145,6 +193,7 @@ if [ "$source_catalog_requested" != "$source_catalog" ]; then
     printf 'Refusing to install from a filesystem alias.\n' >&2
     exit 2
 fi
+assert_source_tree_no_aliases "$source_catalog"
 
 existing=$destination
 while [ ! -d "$existing" ]; do

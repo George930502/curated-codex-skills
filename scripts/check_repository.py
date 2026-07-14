@@ -141,6 +141,12 @@ def check_native_input_contract() -> list[str]:
             errors.append(f"missing required file: {relative}")
         elif "NATIVE-INPUT.md" not in path.read_text(encoding="utf-8"):
             errors.append(f"{relative}: must reference the native-input contract")
+    approval_path = ROOT / consumers[-1]
+    if approval_path.is_file():
+        approval = approval_path.read_text(encoding="utf-8")
+        for rule in ("list_threads", "read_thread", "state: blocked", "Do not guess an identity"):
+            if rule not in approval:
+                errors.append(f"{consumers[-1]}: missing destination-identity rule {rule!r}")
     return errors
 
 
