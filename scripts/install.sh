@@ -167,8 +167,9 @@ for skill in "$source_catalog"/*; do
         marker="$stale_transaction/.curated-codex-skills-transaction"
         transaction_name=
         if [ -d "$stale_transaction" ] && [ -f "$marker" ] &&
-            IFS= read -r transaction_name < "$marker" && [ "$transaction_name" = "$name" ]; then
-            if ! rm -rf "$stale_transaction"; then
+            IFS= read -r transaction_name < "$marker"; then
+            transaction_name=${transaction_name%$'\r'}
+            if [ "$transaction_name" = "$name" ] && ! rm -rf "$stale_transaction"; then
                 printf 'Warning: could not remove stale transaction %s.\n' "$stale_transaction" >&2
             fi
         fi

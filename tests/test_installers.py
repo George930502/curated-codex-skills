@@ -578,7 +578,7 @@ if "%CODEX_SCENARIO%"=="enabled-crlf" echo default_mode_request_user_input  unde
                 first_skill = sorted(path.name for path in (ROOT / "skills").iterdir() if path.is_dir())[0]
                 stale = destination / f".{first_skill}.install.test-residue"
                 (stale / "old").mkdir(parents=True)
-                (stale / TRANSACTION_MARKER).write_text(f"{first_skill}\n", encoding="utf-8")
+                (stale / TRANSACTION_MARKER).write_bytes(f"{first_skill}\r\n".encode())
                 recovered = run(destination, self.fake_bin, "enabled")
                 self.assertEqual(0, recovered.returncode, recovered.stdout)
                 self.assertFalse(stale.exists(), recovered.stdout)
