@@ -110,6 +110,11 @@ assert_no_windows_reparse_path() {
     return 2
 }
 
+if is_filesystem_root "$destination"; then
+    printf 'Refusing to install skills into the filesystem root.\n' >&2
+    exit 2
+fi
+
 assert_no_windows_reparse_path "$source_catalog_requested"
 source_catalog=$(CDPATH= cd -- "$source_catalog_requested" && pwd -P)
 if [ "$source_catalog_requested" != "$source_catalog" ]; then
@@ -134,10 +139,6 @@ for inspected_path in "$source_catalog" "$existing"; do
         [ "$status" -eq 1 ] || exit "$status"
     fi
 done
-if is_filesystem_root "$destination"; then
-    printf 'Refusing to install skills into the filesystem root.\n' >&2
-    exit 2
-fi
 case "$existing/" in
     "$source_catalog/"*)
         printf 'Refusing to install into the packaged source catalog.\n' >&2

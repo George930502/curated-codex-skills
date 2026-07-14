@@ -99,16 +99,6 @@ if "%CODEX_SCENARIO%"=="enabled" echo default_mode_request_user_input  under dev
         )
         command.chmod(0o755)
 
-    def write_unc_root_probe(self, directory: Path) -> None:
-        self.write_fake_codex(directory)
-        command = directory / "cygpath"
-        command.write_text(
-            "#!/usr/bin/env sh\n"
-            "if [ \"$1\" = -w ]; then printf '\\\\\\\\server\\\\share\\n'; else exit 2; fi\n",
-            encoding="ascii",
-        )
-        command.chmod(0o755)
-
     def run_powershell_copy_failure(
         self,
         executable: str,
@@ -279,6 +269,25 @@ if "%CODEX_SCENARIO%"=="enabled" echo default_mode_request_user_input  under dev
         return subprocess.run(
             [shutil.which("bash") or "bash", str(ROOT / "scripts" / "install.sh")],
             cwd=ROOT,
+            env=environment,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            check=False,
+        )
+
+    def run_shell_unc_root(
+        self,
+        executable: str,
+        repository: Path = ROOT,
+    ) -> subprocess.CompletedProcess[str]:
+        environment = os.environ.copy()
+        environment["SKILLS_INSTALL_DIR"] = "//server/share"
+        return subprocess.run(
+            [executable, str(repository / "scripts" / "install.sh")],
+            cwd=repository,
             env=environment,
             text=True,
             encoding="utf-8",
@@ -607,14 +616,14 @@ if "%CODEX_SCENARIO%"=="enabled" echo default_mode_request_user_input  under dev
                 self.assertTrue((sandbox / "skills" / "prompt-review-and-dispatch" / "SKILL.md").is_file())
 
                 if adapter_name in {"bash", "git-bash"}:
-                    unc_probe_bin = self.root / adapter_name / "unc root probe"
-                    self.write_unc_root_probe(unc_probe_bin)
-                    isolated_unc_root = self.root / adapter_name / "isolated unc root"
-                    isolated_unc_root.mkdir()
-                    unc_root = run(isolated_unc_root, unc_probe_bin, "enabled")
+                    executable = (
+                        str(Path(os.environ.get("ProgramFiles", r"C:\Program Files")) / "Git" / "bin" / "bash.exe")
+                        if adapter_name == "git-bash"
+                        else shutil.which("bash") or "bash"
+                    )
+                    unc_root = self.run_shell_unc_root(executable)
                     self.assertNotEqual(0, unc_root.returncode, unc_root.stdout)
                     self.assertIn("Refusing to install skills into the filesystem root", unc_root.stdout)
-                    self.assertEqual([], list(isolated_unc_root.iterdir()))
 
                 if adapter_name == "git-bash":
                     outside_destination = self.root / adapter_name / "outside destination"
