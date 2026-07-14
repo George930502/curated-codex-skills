@@ -108,6 +108,7 @@ if (Test-PathAtOrBelow $destination $source) {
 }
 
 $skills = @(Get-ChildItem -LiteralPath $source -Directory)
+$recoveryPlans = @{}
 foreach ($skill in $skills) {
     $target = Join-Path $destination $skill.Name
     $validTransactions = @()
@@ -134,6 +135,12 @@ foreach ($skill in $skills) {
     if (-not $targetExists -and $backupTransactions.Count -gt 1) {
         throw "Multiple interrupted transactions exist for $($skill.Name); refusing ambiguous recovery."
     }
+    $recoveryPlans[$skill.Name] = @($validTransactions)
+}
+
+foreach ($skill in $skills) {
+    $target = Join-Path $destination $skill.Name
+    $validTransactions = @($recoveryPlans[$skill.Name])
     foreach ($staleTransaction in $validTransactions) {
         $staleBackup = Join-Path $staleTransaction.FullName 'old'
         $targetExists = $null -ne (Get-Item -LiteralPath $target -Force -ErrorAction SilentlyContinue)

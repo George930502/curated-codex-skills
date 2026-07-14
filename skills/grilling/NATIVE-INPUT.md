@@ -22,9 +22,13 @@ verbatim. Do not add a custom field or simulate controls with Markdown.
 
 Every question is blocking. With `autoResolutionMs` omitted, inactivity has no
 agent-authored expiry. Keep the exact pending question and workflow state until
-a valid answer arrives. If the host stops the task and clears the control,
-reissue that same stage when the task resumes; silence, cleanup, and an empty
-answer change no state.
+a valid answer arrives. If `request_user_input` returns without a selected
+option while the task is still active, immediately call it again with the same
+question and options. Repeat without a retry limit; do not finish the turn in
+an awaiting state that requires a prose reply. Only the host stopping the task
+or session may clear the control. When that task resumes, reissue the same
+native stage before any other user-facing response. Silence, cleanup, and an
+empty answer change no state.
 
 If `request_user_input` is unavailable, set the workflow to `blocked` and name
 the missing capability. A prose question is not a substitute.

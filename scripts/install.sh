@@ -192,13 +192,13 @@ case "$destination/" in
         ;;
 esac
 
-skill_count=0
+recovery_transactions=()
+recovery_transaction_names=()
 for skill in "$source_catalog"/*; do
     [ -d "$skill" ] || continue
     name=${skill##*/}
     target="$destination/$name"
-    valid_transactions=()
-    backup_transactions=()
+    backup_count=0
     for stale_transaction in "$destination/.$name.install."*; do
         marker="$stale_transaction/.curated-codex-skills-transaction"
         [ -e "$stale_transaction" ] || [ -L "$stale_transaction" ] || continue
@@ -215,28 +215,39 @@ for skill in "$source_catalog"/*; do
         fi
         [ -d "$stale_transaction" ] && [ -f "$marker" ] || continue
         transaction_marker_matches "$marker" "$name" || continue
-        valid_transactions+=("$stale_transaction")
+        recovery_transactions+=("$stale_transaction")
+        recovery_transaction_names+=("$name")
         stale_backup="$stale_transaction/old"
         if [ -e "$stale_backup" ] || [ -L "$stale_backup" ]; then
-            backup_transactions+=("$stale_transaction")
+            backup_count=$((backup_count + 1))
         fi
     done
-    if [ ! -e "$target" ] && [ ! -L "$target" ] && [ "${#backup_transactions[@]}" -gt 1 ]; then
+    if [ ! -e "$target" ] && [ ! -L "$target" ] && [ "$backup_count" -gt 1 ]; then
         printf 'Multiple interrupted transactions exist for %s; refusing ambiguous recovery.\n' "$name" >&2
         exit 2
     fi
-    if [ "${#valid_transactions[@]}" -gt 0 ]; then
-        for stale_transaction in "${valid_transactions[@]}"; do
-            stale_backup="$stale_transaction/old"
-            if [ ! -e "$target" ] && [ ! -L "$target" ] &&
-                { [ -e "$stale_backup" ] || [ -L "$stale_backup" ]; }; then
-                if ! mv "$stale_backup" "$target"; then
-                    printf 'Could not restore interrupted transaction %s.\n' "$stale_transaction" >&2
-                    exit 2
+done
+
+skill_count=0
+for skill in "$source_catalog"/*; do
+    [ -d "$skill" ] || continue
+    name=${skill##*/}
+    target="$destination/$name"
+    if [ "${#recovery_transactions[@]}" -gt 0 ]; then
+        for recovery_index in "${!recovery_transactions[@]}"; do
+            if [ "${recovery_transaction_names[$recovery_index]}" = "$name" ]; then
+                stale_transaction=${recovery_transactions[$recovery_index]}
+                stale_backup="$stale_transaction/old"
+                if [ ! -e "$target" ] && [ ! -L "$target" ] &&
+                    { [ -e "$stale_backup" ] || [ -L "$stale_backup" ]; }; then
+                    if ! mv "$stale_backup" "$target"; then
+                        printf 'Could not restore interrupted transaction %s.\n' "$stale_transaction" >&2
+                        exit 2
+                    fi
                 fi
-            fi
-            if ! rm -rf "$stale_transaction"; then
-                printf 'Warning: could not remove stale transaction %s.\n' "$stale_transaction" >&2
+                if ! rm -rf "$stale_transaction"; then
+                    printf 'Warning: could not remove stale transaction %s.\n' "$stale_transaction" >&2
+                fi
             fi
         done
     fi

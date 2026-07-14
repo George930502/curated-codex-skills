@@ -17,6 +17,10 @@ native request_user_input unavailable
 The skill is installed correctly when it reaches this audit. The failure means
 the host did not register the native input tool for that Default session.
 
+When the tool is available, an empty return is not an approval and has no retry
+limit. The skill must immediately reissue the same native control while the task
+remains active; it must not fall back to a prose question after three attempts.
+
 The confirmed configuration signal is:
 
 ```powershell

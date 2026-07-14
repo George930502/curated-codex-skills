@@ -27,7 +27,7 @@ remains immutable.
 | Shell installers | Bash on Ubuntu and macOS; Git Bash on Windows | Actual shell processes with isolated temporary destinations |
 | PowerShell installers | Windows PowerShell 5.1 and PowerShell 7 on Windows | Actual script execution, not parser-only inspection |
 | Python | CPython 3.10, 3.11, 3.12, 3.13, and 3.14 on Ubuntu | Standard-library validator and tests; macOS and Windows use 3.11; no PyPy claim |
-| Paths and upgrades | Spaces, Unicode, file collisions, repeat install, failed-copy retention, failed-swap rollback, non-fatal Bash/Git Bash post-commit cleanup failure, exact marked-transaction cleanup, interrupted-backup recovery, ambiguous-backup refusal, transaction-alias rejection, stale-file removal, unrelated-skill preservation, source parity, local/drive/UNC/double-slash root guards, and source/destination aliases | POSIX rejects implementation-defined double-slash paths, folds three or more leading slashes, and canonicalizes other aliases; Windows rejects reparse and substituted-drive aliases; deterministic temporary directories only |
+| Paths and upgrades | Spaces, Unicode, file collisions, repeat install, failed-copy retention, failed-swap rollback, non-fatal Bash/Git Bash post-commit cleanup failure, exact marked-transaction cleanup, interrupted-backup recovery, catalog-wide recovery preflight before mutation, ambiguous-backup refusal, transaction-alias rejection, stale-file removal, unrelated-skill preservation, source parity, local/drive/UNC/double-slash root guards, and source/destination aliases | POSIX rejects implementation-defined double-slash paths, folds three or more leading slashes, and canonicalizes other aliases; Windows rejects reparse and substituted-drive aliases; deterministic temporary directories only |
 | Codex capability | CLI absent; feature absent, enabled, disabled, malformed, command failure, and LF/CRLF output | Fixtures prove installer branching, not historical Codex binaries or UI |
 | Skill discovery | Exact source parity is executed in isolated destinations; the documented `$HOME/.agents/skills` default is asserted statically | CI does not authenticate or launch an interactive Codex client |
 
@@ -56,6 +56,10 @@ clickable selections, preserved state after empty answers, and dispatched only
 after `同意` was selected. This is a reproducible manual report for that observed
 client and configuration, but it has no retained independent GUI artifact and
 is not an independently auditable or universal client/version claim.
+The checked-in contract requires the same unanswered control to be reissued
+without a retry limit while the task remains active. Repository checks enforce
+that requirement statically; they do not prove how every client renders or
+retains its native UI.
 The clarification/grilling control was not separately recorded in this manual
 observation; its coverage is limited to the static contract and executable
 capability fixtures above.

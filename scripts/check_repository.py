@@ -119,6 +119,9 @@ def check_native_input_contract() -> list[str]:
         "- Alignment:",
         "- Approval:",
         "- Rejection:",
+        "Repeat without a retry limit",
+        "do not finish the turn in",
+        "Only the host stopping the task",
     )
     errors = [
         f"{contract_path.relative_to(ROOT)}: missing required native-input rule {rule!r}"

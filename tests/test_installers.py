@@ -650,7 +650,9 @@ if "%CODEX_SCENARIO%"=="enabled-crlf" echo default_mode_request_user_input  unde
                 destination = self.root / adapter_name / "adversarial recovery"
                 installed = run(destination, self.fake_bin, "enabled")
                 self.assertEqual(0, installed.returncode, installed.stdout)
-                first_skill = sorted(path.name for path in (ROOT / "skills").iterdir() if path.is_dir())[0]
+                skill_names = sorted(path.name for path in (ROOT / "skills").iterdir() if path.is_dir())
+                first_skill = skill_names[0]
+                last_skill = skill_names[-1]
                 target = destination / first_skill
 
                 nonexact = destination / f".{first_skill}.install.nonexact"
@@ -667,13 +669,16 @@ if "%CODEX_SCENARIO%"=="enabled-crlf" echo default_mode_request_user_input  unde
                 (outside / "old").mkdir(parents=True)
                 sentinel = outside / "old" / "preserve.txt"
                 sentinel.write_text("outside", encoding="utf-8")
-                (outside / TRANSACTION_MARKER).write_bytes(f"{first_skill}\r\n".encode())
-                transaction_alias = destination / f".{first_skill}.install.forged"
+                (outside / TRANSACTION_MARKER).write_bytes(f"{last_skill}\r\n".encode())
+                transaction_alias = destination / f".{last_skill}.install.forged"
                 self.make_directory_link(transaction_alias, outside)
+                first_target_sentinel = target / "catalog-preflight-sentinel.txt"
+                first_target_sentinel.write_text("must survive", encoding="utf-8")
                 forged = run(destination, self.fake_bin, "enabled")
                 self.assertNotEqual(0, forged.returncode, forged.stdout)
                 self.assertIn("transaction filesystem alias", forged.stdout)
                 self.assertTrue(sentinel.is_file(), forged.stdout)
+                self.assertTrue(first_target_sentinel.is_file(), forged.stdout)
                 if transaction_alias.is_symlink():
                     transaction_alias.unlink()
                 else:

@@ -38,7 +38,9 @@ is not identity.
 
 After displaying the full draft and destination, run the approval gate defined
 in the native-input contract. Approval authorizes only the displayed bytes and
-destination. On `不同意`, run the native rejection gate and store its selected
+destination. `awaiting-approval` remains a tool-backed native stage until an
+option is selected; it has no attempt counter and cannot return control to a
+prose-input prompt. On `不同意`, run the native rejection gate and store its selected
 category or `Other` text verbatim in `rejection_reason`. Approval-gate `Other`
 is already the verbatim reason. Then clear the rejected draft and return that
 reason to grilling.
