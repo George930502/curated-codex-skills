@@ -8,10 +8,10 @@ destination=${SKILLS_INSTALL_DIR:-"$HOME/.agents/skills"}
 
 is_subst_path() {
     command -v cygpath >/dev/null 2>&1 || return 1
-    command -v cmd.exe >/dev/null 2>&1 || return 1
+    command -v subst.exe >/dev/null 2>&1 || return 1
     windows_path=$(cygpath -w "$1")
     drive=$(printf '%.2s' "$windows_path")
-    subst_output=$(cmd.exe /d /c subst 2>/dev/null | tr -d '\r')
+    subst_output=$(subst.exe 2>/dev/null | tr -d '\r')
     case "$subst_output" in
         *"$drive\\: =>"*) return 0 ;;
         *) return 1 ;;

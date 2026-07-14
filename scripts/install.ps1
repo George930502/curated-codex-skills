@@ -76,11 +76,11 @@ if ($requested -eq [System.IO.Path]::GetPathRoot($requested)) {
 }
 $existing = $requested
 while (-not (Test-Path -LiteralPath $existing -PathType Container)) {
-    $parent = Split-Path -LiteralPath $existing -Parent
-    if (-not $parent -or $parent -eq $existing) {
+    $parent = [System.IO.Directory]::GetParent($existing)
+    if (-not $parent -or $parent.FullName -eq $existing) {
         throw "Cannot resolve an existing parent for $requested."
     }
-    $existing = $parent
+    $existing = $parent.FullName
 }
 $existing = Resolve-UnaliasedDirectory $existing
 if (Test-PathAtOrBelow $existing $source) {
