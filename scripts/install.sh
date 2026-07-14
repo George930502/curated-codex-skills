@@ -203,6 +203,17 @@ for skill in "$source_catalog"/*; do
                 exit $?
             fi
         fi
+        if [ -L "$marker" ]; then
+            printf 'Refusing to recover through a transaction marker filesystem alias.\n' >&2
+            exit 2
+        fi
+        if [ -n "${MSYSTEM:-}" ] && [ -e "$marker" ]; then
+            if assert_no_windows_reparse_path "$marker"; then
+                :
+            else
+                exit $?
+            fi
+        fi
         [ -d "$stale_transaction" ] && [ -f "$marker" ] || continue
         transaction_marker_matches "$marker" "$name" || continue
         recovery_transactions+=("$stale_transaction")

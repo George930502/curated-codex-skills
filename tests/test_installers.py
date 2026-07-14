@@ -480,6 +480,15 @@ if "%CODEX_SCENARIO%"=="enabled-crlf" echo default_mode_request_user_input  unde
         else:
             link.symlink_to(target, target_is_directory=True)
 
+    def make_file_link(self, link: Path, target: Path) -> None:
+        link.symlink_to(target, target_is_directory=False)
+
+    def test_packaged_parity_rejects_top_level_alias(self) -> None:
+        source = sorted(path for path in (ROOT / "skills").iterdir() if path.is_dir())[0]
+        alias = self.root / "top-level skill alias"
+        self.make_directory_link(alias, source)
+        self.assertTrue(validate.compare_packaged_skill(source, alias))
+
     def make_subst(self, target: Path) -> Path:
         for letter in "ZYXWVUTSRQPONMLKJIHGFED":
             drive = f"{letter}:"
@@ -678,6 +687,22 @@ if "%CODEX_SCENARIO%"=="enabled-crlf" echo default_mode_request_user_input  unde
                     self.assertEqual(0, ignored.returncode, ignored.stdout)
                     self.assertTrue(binary_sentinel.is_file(), ignored.stdout)
                     shutil.rmtree(binary_marker)
+
+                external_marker = self.root / adapter_name / "external marker"
+                external_marker.write_bytes(f"{last_skill}\n".encode())
+                marker_alias_transaction = destination / f".{last_skill}.install.marker-alias"
+                marker_alias_transaction.mkdir()
+                self.make_file_link(marker_alias_transaction / TRANSACTION_MARKER, external_marker)
+                marker_alias_sentinel = marker_alias_transaction / "preserve.txt"
+                marker_alias_sentinel.write_text("user owned", encoding="utf-8")
+                early_target_sentinel = target / "marker-preflight-sentinel.txt"
+                early_target_sentinel.write_text("must survive", encoding="utf-8")
+                aliased_marker = run(destination, self.fake_bin, "enabled")
+                self.assertNotEqual(0, aliased_marker.returncode, aliased_marker.stdout)
+                self.assertIn("transaction marker filesystem alias", aliased_marker.stdout)
+                self.assertTrue(marker_alias_sentinel.is_file(), aliased_marker.stdout)
+                self.assertTrue(early_target_sentinel.is_file(), aliased_marker.stdout)
+                shutil.rmtree(marker_alias_transaction)
 
                 outside = self.root / adapter_name / "forged transaction target"
                 (outside / "old").mkdir(parents=True)

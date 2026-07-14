@@ -148,8 +148,12 @@ foreach ($skill in $skills) {
         if ($staleTransaction.Attributes -band [System.IO.FileAttributes]::ReparsePoint) {
             throw 'Refusing to recover through a transaction filesystem alias.'
         }
-        if (-not (Test-Path -LiteralPath $marker -PathType Leaf)) {
+        $markerItem = Get-Item -LiteralPath $marker -Force -ErrorAction SilentlyContinue
+        if (-not $markerItem -or $markerItem.PSIsContainer) {
             continue
+        }
+        if ($markerItem.Attributes -band [System.IO.FileAttributes]::ReparsePoint) {
+            throw 'Refusing to recover through a transaction marker filesystem alias.'
         }
         if (-not (Test-TransactionMarker $marker $skill.Name)) {
             continue

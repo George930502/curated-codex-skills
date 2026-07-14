@@ -162,6 +162,10 @@ def validate_skill(skill: Path) -> list[str]:
 
 def compare_packaged_skill(source: Path, candidate: Path) -> list[str]:
     """Require an installed catalog skill to match its packaged source exactly."""
+    candidate_metadata = candidate.lstat()
+    if candidate.is_symlink() or getattr(candidate_metadata, "st_file_attributes", 0) & 0x400:
+        return [f"{candidate}: installed content differs from packaged source"]
+
     def manifest(root: Path) -> dict[Path, tuple[str, bytes | str | None]]:
         entries: dict[Path, tuple[str, bytes | str | None]] = {}
         for path in root.rglob("*"):

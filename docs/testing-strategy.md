@@ -29,9 +29,10 @@ native GitHub matrix and the existing `unittest` suite.
   failed-copy retention, failed-swap rollback, non-fatal Bash/Git Bash
   post-commit cleanup failure, marked transaction cleanup and interrupted-backup
   recovery, catalog-wide preflight before mutation, ambiguous-backup refusal,
-  transaction-alias rejection, exact marker
+  transaction and marker-alias rejection, exact marker
   matching, stale-file removal,
-  unrelated-skill and nested-junction target preservation, exact source parity,
+  unrelated-skill and nested-junction target preservation, exact structural
+  source parity including top-level aliases,
   unresolved-parent rejection, source/destination alias, Windows
   substituted-drive with restricted and shadowed `PATH`, PowerShell and Git
   Bash drive-root, POSIX double-slash rejection and triple-slash normalization,
