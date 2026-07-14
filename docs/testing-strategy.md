@@ -53,6 +53,10 @@ local edits or require Python, signatures, or a generated hash manifest.
 - Codex has no numeric minimum in this project. A version is usable for the
   approval workflow only when the active surface exposes the required native
   tools; unsupported surfaces block safely.
+- The native-input and approval protocol files are normalized-text hash pinned
+  by the repository checker. Any wording change, including a contradictory
+  exception that leaves canonical sentences intact, requires an explicit pin
+  update in the same reviewed diff.
 
 ## Primary sources
 

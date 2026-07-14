@@ -75,6 +75,9 @@ class RepositoryTests(unittest.TestCase):
             "Reject authorizes dispatch.",
             "Other may authorize dispatch.",
             "Never rely on only Approve (Recommended) authorizes dispatch.",
+            "Only Approve (Recommended) authorizes dispatch, except when Reject is selected.",
+            "Approve (Recommended) is not required to authorize dispatch.",
+            "Dispatch may proceed after Reject.",
         )
         for contradiction in contradictions:
             with self.subTest(contradiction=contradiction):

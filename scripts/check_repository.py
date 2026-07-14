@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 from pathlib import Path
 import re
 import sys
@@ -67,39 +68,10 @@ APPROVAL_RULES = (
     "dispatch",
     "prompt: draft (unchanged)",
 )
-CONTRADICTORY_NATIVE_RULES = (
-    (
-        "negates the English native-control requirement",
-        re.compile(
-            r"(?is)\b(?:do not|never|must not|need not)\b.{0,120}"
-            r"\b(?:agent-authored|native-control)\b.{0,120}\bEnglish\b"
-        ),
-    ),
-    (
-        "negates Approve authorization",
-        re.compile(
-            r"(?i)\bApprove \(Recommended\)[ \t]+"
-            r"(?:does[ \t]+not|cannot|must[ \t]+not|never)[ \t]+authorize\b"
-        ),
-    ),
-    (
-        "authorizes a non-approval answer",
-        re.compile(
-            r"(?i)\b(?:Reject|Other|blank|malformed|missing)\b"
-            r"(?:[ \t]+(?:answer|selection|response))?[ \t]+"
-            r"(?:authorizes?|may[ \t]+authorize|can[ \t]+authorize)[ \t]+"
-            r"dispatch\b"
-        ),
-    ),
-    (
-        "negates the only-Approve rule",
-        re.compile(
-            r"(?i)\b(?:do not|never|must not|cannot)\b[^\n.!?]{0,120}\bonly\b"
-            r"[^\n.!?]{0,80}\bApprove \(Recommended\)"
-            r"[^\n.!?]{0,80}\bauthorizes?\b"
-        ),
-    ),
-)
+CRITICAL_CONTRACT_HASHES = {
+    "native-input": "51cc409d5cf799c339d189f2d90cc931a3c01b8a7682f61aac45b6d393c5fd97",
+    "approval": "deaf011795a5e2e124fabc85f034a1c152235767cdfd95d001adc1ba95ab8225",
+}
 
 
 def markdown_files() -> list[Path]:
@@ -192,12 +164,16 @@ def native_input_text_errors(contract: str) -> list[str]:
         for label in FORMER_NATIVE_LABELS
         if label in contract
     )
-    errors.extend(
-        f"contains contradictory native-input rule: {name}"
-        for name, pattern in CONTRADICTORY_NATIVE_RULES
-        if pattern.search(contract)
-    )
+    errors.extend(critical_contract_errors("native-input", contract))
     return errors
+
+
+def critical_contract_errors(name: str, text: str) -> list[str]:
+    actual = hashlib.sha256(text.encode()).hexdigest()
+    expected = CRITICAL_CONTRACT_HASHES[name]
+    if actual == expected:
+        return []
+    return [f"{name} content differs from its reviewed contract pin"]
 
 
 def approval_protocol_errors(protocol: str) -> list[str]:
@@ -207,11 +183,7 @@ def approval_protocol_errors(protocol: str) -> list[str]:
         for rule in APPROVAL_RULES
         if rule not in normalized
     ]
-    errors.extend(
-        f"contains contradictory approval rule: {name}"
-        for name, pattern in CONTRADICTORY_NATIVE_RULES
-        if pattern.search(protocol)
-    )
+    errors.extend(critical_contract_errors("approval", protocol))
     return errors
 
 
