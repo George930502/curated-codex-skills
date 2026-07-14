@@ -31,10 +31,10 @@ remains immutable.
 | Codex capability | CLI absent; feature absent, enabled, disabled, malformed, command failure, and LF/CRLF output | Fixtures prove installer branching, not historical Codex binaries or UI |
 | Skill discovery | Exact source parity is executed in isolated destinations; the documented `$HOME/.agents/skills` default is asserted statically | CI does not authenticate or launch an interactive Codex client |
 
-Executable commit `7aa9a92` passed [CI run
-29319150087](https://github.com/George930502/curated-codex-skills/actions/runs/29319150087)
+Executable commit `b49cc0b` passed [CI run
+29320518987](https://github.com/George930502/curated-codex-skills/actions/runs/29320518987)
 and [CodeQL run
-29319150138](https://github.com/George930502/curated-codex-skills/actions/runs/29319150138).
+29320518971](https://github.com/George930502/curated-codex-skills/actions/runs/29320518971).
 The CI run contains successful Ubuntu, macOS, Windows, all five Ubuntu Python-version,
 and aggregate jobs. Its Windows Server 2025 job directly identified and ran
 Windows PowerShell 5.1, PowerShell 7, and Git Bash before exercising each
