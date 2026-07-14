@@ -501,6 +501,13 @@ if "%CODEX_SCENARIO%"=="enabled" echo default_mode_request_user_input  under dev
                 self.assertEqual(0, linked_result.returncode, linked_result.stdout)
                 self.assertTrue(sentinel.is_file())
 
+                first_skill = sorted(path.name for path in (ROOT / "skills").iterdir() if path.is_dir())[0]
+                nested_link = destination / first_skill / "nested outside link"
+                self.make_directory_link(nested_link, outside)
+                nested_link_result = run(destination, self.fake_bin, "enabled")
+                self.assertEqual(0, nested_link_result.returncode, nested_link_result.stdout)
+                self.assertTrue(sentinel.is_file(), nested_link_result.stdout)
+
                 stale = destination / "prompt-review-and-dispatch" / "stale.txt"
                 stale.write_text("remove me", encoding="utf-8")
                 unrelated = destination / "user-owned-skill"
@@ -511,7 +518,6 @@ if "%CODEX_SCENARIO%"=="enabled" echo default_mode_request_user_input  under dev
                 self.assertTrue(unrelated.is_dir())
                 self.assert_source_parity(destination)
 
-                first_skill = sorted(path.name for path in (ROOT / "skills").iterdir() if path.is_dir())[0]
                 affected_target = destination / first_skill
                 marker = affected_target / "preserve-on-failure.txt"
                 marker.write_text("working install", encoding="utf-8")
@@ -566,6 +572,19 @@ if "%CODEX_SCENARIO%"=="enabled" echo default_mode_request_user_input  under dev
                     self.assertNotEqual(0, dot_segment.returncode, dot_segment.stdout)
                     self.assertIn("Refusing to install through an unresolved parent segment", dot_segment.stdout)
                     self.assertEqual([], list(base.iterdir()))
+                else:
+                    base = self.root / adapter_name / "dot segment guard"
+                    base.mkdir(parents=True)
+                    dot_destination = Path(str(base / "unresolved") + "\\..\\destination")
+                    dot_segment = run(dot_destination, self.fake_bin, "enabled")
+                    self.assertNotEqual(0, dot_segment.returncode, dot_segment.stdout)
+                    self.assertIn("Refusing to install through an unresolved parent segment", dot_segment.stdout)
+                    self.assertEqual([], list(base.iterdir()))
+
+                    root_destination = Path(os.environ.get("SystemDrive", "C:") + "\\")
+                    root_result = run(root_destination, self.fake_bin, "enabled")
+                    self.assertNotEqual(0, root_result.returncode, root_result.stdout)
+                    self.assertIn("Refusing to install skills into the filesystem root", root_result.stdout)
 
                 sandbox = self.root / adapter_name / "guard repo"
                 shutil.copytree(ROOT / "scripts", sandbox / "scripts")

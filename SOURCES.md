@@ -30,7 +30,7 @@ small instruction-and-installer repository:
 
 | Local file | Upstream file | Upstream SHA-256 | Local SHA-256 | Adaptation |
 |---|---|---|---|---|
-| `skills/grill-with-docs/SKILL.md` | `skills/engineering/grill-with-docs/SKILL.md` | `610d091047bcfb9db0f75c057d15538481a721111579fc5ec7f83ad9131a2165` | `454528d25fcc31d3e912e0bab24d22bb9f0c4439c73e63992b97a6a3427439f2` | Core description/body preserved; Codex invocation syntax and completion gate added. |
+| `skills/grill-with-docs/SKILL.md` | `skills/engineering/grill-with-docs/SKILL.md` | `610d091047bcfb9db0f75c057d15538481a721111579fc5ec7f83ad9131a2165` | `454528d25fcc31d3e912e0bab24d22bb9f0c4439c73e63992b97a6a3427439f2` | Core description/body preserved; Codex invocation syntax and completion gate added. Upstream `disable-model-invocation: true` was removed intentionally so the composed prompt-review workflow can invoke this skill. |
 | `skills/grilling/SKILL.md` | `skills/productivity/grilling/SKILL.md` | `44331dda57f461db4fec3f2efb6ddabe7aaaa0a57ae0f88a883bc61aed8a0587` | `8ba1c3cfc3d75a7f385daa2903abbf173c53b807a6129b16a8beebd73bf6c5fc` | Native decision-tree and fact ownership preserved; question cadence moved to the sole native-input contract. |
 | `skills/domain-modeling/SKILL.md` | `skills/engineering/domain-modeling/SKILL.md` | `152e2c97239affb12a60c5f4a7e74ab546a49ae169688c81f4e2ccc42dafa579` | `4d91ae37bde9cb589be6f81f4fc2bc91002f64ab354994321b83caa607e23bad` | Native behavior preserved; duplicated file-layout and ADR gate text replaced by conditional pointers; every standalone decision uses the shared native-input contract. |
 | `skills/domain-modeling/ADR-FORMAT.md` | same relative upstream path | `f1f36cd3f8d3b6474ddd5855da4e233bfc4ae1a1c5024909ccf11871819a41b2` | same | Unchanged. |
@@ -41,7 +41,12 @@ small instruction-and-installer repository:
 - Repository: https://github.com/nidhinjs/prompt-master
 - Commit: `d15eabbe5d2122eedc060bae8a771381e9873d1b`
 - License: upstream `LICENSE`, SHA-256 `29e8ba0b54274eaa92b7cb074fe1765ba7b83993e0d2605e5308c6972a47daa7`; MIT notice preserved in `THIRD_PARTY_NOTICES.md`.
-- Exact unified diff: [`provenance/nidhin-adaptations.patch`](provenance/nidhin-adaptations.patch).
+- Review-oriented adaptation record:
+  [`provenance/nidhin-adaptations.patch`](provenance/nidhin-adaptations.patch).
+  It records source-to-local hunks but is not mechanically applicable as one
+  patch because two upstream references are merged into one distilled local
+  reference. The source paths, commit, hashes, output hashes, and merge
+  relationship below are the reproducible audit contract.
 
 | Upstream file | SHA-256 | Distilled locally |
 |---|---|---|
@@ -56,6 +61,18 @@ and `references/gpt56-routing.md` at SHA-256
 
 OpenAI guidance overrides upstream model-specific advice. In particular, the
 local skill omits visible chain-of-thought requests and generic role padding.
+
+## OpenAI GPT-5.6 guidance synthesis
+
+`skills/prompt-master-gpt5/references/openai-gpt56-prompting.md` is an original
+fact synthesis, not copied OpenAI documentation. It was reviewed on 2026-07-14
+from the official pages linked in its ordered source inventory, beginning with
+[Using GPT-5.6](https://developers.openai.com/api/docs/guides/latest-model.md),
+[Prompting guidance for GPT-5.6 Sol](https://developers.openai.com/api/docs/guides/prompt-guidance-gpt-5p6.md),
+and [Upgrading to GPT-5.6 Sol](https://developers.openai.com/api/docs/guides/upgrading-to-gpt-5p6-sol.md).
+Local SHA-256:
+`5e9874653847c04d5e31dd2438cba0a9baad51872db00b58ab1cdc9422db1ce1`.
+The file itself records the complete selected-source boundary and claim mapping.
 
 ## Skill-writing audit
 

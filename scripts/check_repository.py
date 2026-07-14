@@ -72,7 +72,8 @@ def check_identity() -> list[str]:
 
 def check_workflows() -> list[str]:
     errors: list[str] = []
-    for path in sorted((ROOT / ".github" / "workflows").glob("*.yml")):
+    workflow_root = ROOT / ".github" / "workflows"
+    for path in sorted((*workflow_root.glob("*.yml"), *workflow_root.glob("*.yaml"))):
         text = path.read_text(encoding="utf-8")
         if not re.search(r"(?m)^permissions:\s*$", text):
             errors.append(f"{path.relative_to(ROOT)}: missing explicit permissions")
@@ -81,6 +82,8 @@ def check_workflows() -> list[str]:
                 errors.append(
                     f"{path.relative_to(ROOT)}: action is not pinned to a full commit SHA"
                 )
+        if "actions/checkout@" in text and "persist-credentials: false" not in text:
+            errors.append(f"{path.relative_to(ROOT)}: checkout must disable credential persistence")
     return errors
 
 
@@ -97,6 +100,7 @@ def check_install_destinations() -> list[str]:
     for guard in (
         "Refusing to install skills into the filesystem root",
         "Refusing to install into the packaged source catalog",
+        "Refusing to install through an unresolved parent segment",
     ):
         if guard not in shell or guard not in powershell:
             errors.append(f"installers must both enforce safety guard: {guard}")

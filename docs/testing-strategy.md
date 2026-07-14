@@ -27,9 +27,10 @@ native GitHub matrix and the existing `unittest` suite.
   environment changes. Run logs record the actual Python and platform strings.
 - Installer tests cover spaces, Unicode, collisions, idempotent upgrades,
   failed-copy retention, failed-swap rollback, stale-file removal,
-  unrelated-skill preservation, exact source parity, unresolved-parent
-  rejection, source/destination alias, Windows substituted-drive, Git Bash
-  drive-root, and UNC share-root guards, plus all
+  unrelated-skill and nested-junction target preservation, exact source parity,
+  unresolved-parent rejection, source/destination alias, Windows
+  substituted-drive with restricted and shadowed `PATH`, PowerShell and Git
+  Bash drive-root, and Bash/Git Bash UNC share-root guards, plus all
   capability diagnostic branches, including script-based Codex command
   failures.
 - Codex has no numeric minimum in this project. A version is usable for the

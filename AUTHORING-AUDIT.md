@@ -20,6 +20,8 @@ are intentionally excluded from this public artifact. Resulting checks:
 | Pruning/YAGNI | Removed text fallbacks, private MCP transport, repeated GPT rules, and duplicated domain format policy. |
 
 Validation evidence from the same task: all five source and installed skills
-passed `quick_validate.py`; source/install parity and exact upstream adaptation
-diff reproduction passed. The final `$code-review` runs use fresh isolated
-Standards and Spec subagents.
+passed the repository validator, and source/install parity passed. Upstream
+commits, source hashes, local hashes, and adaptation records were reviewed;
+the multi-source Prompt Master distillation is intentionally not represented
+as one mechanically applicable patch. The final `$code-review` runs use fresh
+isolated Standards and Spec subagents.

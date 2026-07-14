@@ -59,8 +59,14 @@ function Remove-Entry {
         } else {
             [System.IO.File]::Delete($item.FullName)
         }
+    } elseif ($item.PSIsContainer) {
+        foreach ($child in @(Get-ChildItem -LiteralPath $item.FullName -Force)) {
+            Remove-Entry $child.FullName
+        }
+        [System.IO.Directory]::Delete($item.FullName)
     } else {
-        Remove-Item -LiteralPath $Path -Recurse -Force
+        $item.Attributes = [System.IO.FileAttributes]::Normal
+        [System.IO.File]::Delete($item.FullName)
     }
 }
 
@@ -74,6 +80,9 @@ function Test-PathAtOrBelow {
 
 $repoRoot = Resolve-UnaliasedDirectory (Join-Path $PSScriptRoot '..')
 $source = Resolve-UnaliasedDirectory (Join-Path $repoRoot 'skills')
+if (@($Destination -split '[\\/]' | Where-Object { $_ -eq '..' }).Count -gt 0) {
+    throw 'Refusing to install through an unresolved parent segment.'
+}
 $requested = [System.IO.Path]::GetFullPath($Destination)
 
 if ($requested -eq [System.IO.Path]::GetPathRoot($requested)) {
