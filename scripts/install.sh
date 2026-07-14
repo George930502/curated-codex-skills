@@ -54,13 +54,23 @@ is_filesystem_root() {
     return 1
 }
 
+resolve_unaliased_windows_directory() {
+    logical=$(CDPATH= cd -- "$1" && pwd -L)
+    physical=$(CDPATH= cd -- "$1" && pwd -P)
+    if command -v cygpath >/dev/null 2>&1 && [ "$logical" != "$physical" ]; then
+        printf 'Refusing to install through a filesystem alias.\n' >&2
+        return 2
+    fi
+    printf '%s\n' "$physical"
+}
+
 existing=$destination
 while [ ! -d "$existing" ]; do
     parent=$(dirname -- "$existing")
     [ "$parent" != "$existing" ] || break
     existing=$parent
 done
-existing=$(CDPATH= cd -- "$existing" && pwd -P)
+existing=$(resolve_unaliased_windows_directory "$existing")
 if is_subst_path "$source_catalog" || is_subst_path "$existing"; then
     printf 'Refusing to install through a filesystem alias.\n' >&2
     exit 2
@@ -76,7 +86,7 @@ case "$existing/" in
         ;;
 esac
 mkdir -p "$destination"
-destination=$(CDPATH= cd -- "$destination" && pwd -P)
+destination=$(resolve_unaliased_windows_directory "$destination")
 if is_filesystem_root "$destination"; then
     printf 'Refusing to install skills into the filesystem root.\n' >&2
     exit 2

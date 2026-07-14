@@ -334,6 +334,13 @@ if "%CODEX_SCENARIO%"=="enabled" echo default_mode_request_user_input  under dev
             installed = destination / source.name
             self.assertEqual([], validate.compare_packaged_skill(source, installed))
 
+    def snapshot_tree(self, directory: Path) -> dict[str, bytes | None]:
+        snapshot: dict[str, bytes | None] = {}
+        for path in sorted(directory.rglob("*")):
+            relative = path.relative_to(directory).as_posix()
+            snapshot[relative] = None if path.is_dir() else path.read_bytes()
+        return snapshot
+
     def make_directory_link(self, link: Path, target: Path) -> None:
         if os.name == "nt":
             result = subprocess.run(
@@ -438,8 +445,11 @@ if "%CODEX_SCENARIO%"=="enabled" echo default_mode_request_user_input  under dev
                 self.assertTrue(unrelated.is_dir())
                 self.assert_source_parity(destination)
 
-                marker = destination / "prompt-review-and-dispatch" / "preserve-on-failure.txt"
+                first_skill = sorted(path.name for path in (ROOT / "skills").iterdir() if path.is_dir())[0]
+                affected_target = destination / first_skill
+                marker = affected_target / "preserve-on-failure.txt"
                 marker.write_text("working install", encoding="utf-8")
+                before_failure = self.snapshot_tree(affected_target)
                 if adapter_name in {"powershell", "pwsh"}:
                     failed_copy = self.run_powershell_copy_failure(
                         shutil.which(adapter_name) or adapter_name,
@@ -450,7 +460,7 @@ if "%CODEX_SCENARIO%"=="enabled" echo default_mode_request_user_input  under dev
                     self.write_failing_copy(failing_bin)
                     failed_copy = run(destination, failing_bin, "enabled")
                 self.assertNotEqual(0, failed_copy.returncode, failed_copy.stdout)
-                self.assertTrue(marker.is_file(), failed_copy.stdout)
+                self.assertEqual(before_failure, self.snapshot_tree(affected_target), failed_copy.stdout)
 
                 if adapter_name in {"powershell", "pwsh"}:
                     failed_swap = self.run_powershell_swap_failure(
@@ -462,7 +472,7 @@ if "%CODEX_SCENARIO%"=="enabled" echo default_mode_request_user_input  under dev
                     self.write_failing_swap(failing_bin)
                     failed_swap = run(destination, failing_bin, "enabled")
                 self.assertNotEqual(0, failed_swap.returncode, failed_swap.stdout)
-                self.assertTrue(marker.is_file(), failed_swap.stdout)
+                self.assertEqual(before_failure, self.snapshot_tree(affected_target), failed_swap.stdout)
 
                 recovered = run(destination, self.fake_bin, "enabled")
                 self.assertEqual(0, recovered.returncode, recovered.stdout)
@@ -524,6 +534,16 @@ if "%CODEX_SCENARIO%"=="enabled" echo default_mode_request_user_input  under dev
                     self.assertNotEqual(0, unc_root.returncode, unc_root.stdout)
                     self.assertIn("Refusing to install skills into the filesystem root", unc_root.stdout)
                     self.assertEqual([], list(isolated_unc_root.iterdir()))
+
+                if adapter_name == "git-bash":
+                    outside_destination = self.root / adapter_name / "outside destination"
+                    outside_destination.mkdir()
+                    destination_junction = self.root / adapter_name / "destination junction"
+                    self.make_directory_link(destination_junction, outside_destination)
+                    junction_result = run(destination_junction, self.fake_bin, "enabled")
+                    self.assertNotEqual(0, junction_result.returncode, junction_result.stdout)
+                    self.assertIn("Refusing to install through a filesystem alias", junction_result.stdout)
+                    self.assertEqual([], list(outside_destination.iterdir()))
 
                 if os.name == "nt":
                     substituted_repo = self.make_subst(sandbox)
