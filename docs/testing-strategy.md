@@ -27,7 +27,7 @@ native GitHub matrix and the existing `unittest` suite.
   environment changes. Run logs record the actual Python and platform strings.
 - Installer tests cover spaces, Unicode, collisions, idempotent upgrades,
   stale-file removal, unrelated-skill preservation, exact source parity, and
-  all capability diagnostic branches.
+  source-alias guards, and all capability diagnostic branches.
 - Codex has no numeric minimum in this project. A version is usable for the
   approval workflow only when the active surface exposes the required native
   tools; unsupported surfaces block safely.

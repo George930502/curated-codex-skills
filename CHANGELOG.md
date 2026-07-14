@@ -13,8 +13,8 @@ Versions use [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   installed, while preserving unrelated user skills.
 - Distinguish missing, disabled, malformed, and failed Codex native-input
   capability diagnostics.
-- Refuse destructive install destinations at the filesystem root or inside the
-  packaged source catalog.
+- Refuse destructive install destinations at the filesystem root, inside the
+  packaged source catalog, or through an unsafe filesystem alias.
 
 ### Changed
 

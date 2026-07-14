@@ -6,7 +6,7 @@ repo_root=$(CDPATH= cd -- "$script_dir/.." && pwd)
 destination=${SKILLS_INSTALL_DIR:-"$HOME/.agents/skills"}
 
 mkdir -p "$destination"
-destination=$(CDPATH= cd -- "$destination" && pwd)
+destination=$(CDPATH= cd -- "$destination" && pwd -P)
 if [ "$destination" = / ]; then
     printf 'Refusing to install skills into the filesystem root.\n' >&2
     exit 2

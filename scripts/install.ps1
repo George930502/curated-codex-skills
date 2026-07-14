@@ -14,6 +14,16 @@ $destination = [System.IO.Path]::GetFullPath((Resolve-Path -LiteralPath $destina
 if ($destination -eq [System.IO.Path]::GetPathRoot($destination)) {
     throw 'Refusing to install skills into the filesystem root.'
 }
+$current = [System.IO.Path]::GetPathRoot($destination)
+foreach ($segment in $destination.Substring($current.Length) -split '[\\/]') {
+    if (-not $segment) {
+        continue
+    }
+    $current = Join-Path $current $segment
+    if ((Get-Item -LiteralPath $current -Force).Attributes -band [System.IO.FileAttributes]::ReparsePoint) {
+        throw 'Refusing to install through a filesystem alias.'
+    }
+}
 $sourcePrefix = $source + [System.IO.Path]::DirectorySeparatorChar
 if ([System.String]::Equals($destination, $source, [System.StringComparison]::OrdinalIgnoreCase) -or
     $destination.StartsWith($sourcePrefix, [System.StringComparison]::OrdinalIgnoreCase)) {

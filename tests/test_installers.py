@@ -268,6 +268,13 @@ if "%CODEX_SCENARIO%"=="enabled" echo default_mode_request_user_input  under dev
                     self.assertIn("Refusing to install into the packaged source catalog", guarded.stdout)
                     self.assertTrue((sandbox / "skills" / "prompt-review-and-dispatch" / "SKILL.md").is_file())
 
+                    alias = sandbox / "source alias"
+                    self.make_directory_link(alias, sandbox / "skills")
+                    aliased = run(alias, fake_bin, "enabled", sandbox)
+                    self.assertNotEqual(0, aliased.returncode, aliased.stdout)
+                    self.assertIn("Refusing to install", aliased.stdout)
+                    self.assertTrue((sandbox / "skills" / "prompt-review-and-dispatch" / "SKILL.md").is_file())
+
                 for scenario, message in expected.items():
                     with self.subTest(adapter=adapter_name, scenario=scenario):
                         result = run(
