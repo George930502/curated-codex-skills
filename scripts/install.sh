@@ -1,15 +1,29 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-script_dir_requested=$(dirname -- "$0")
+case "$0" in
+    */*) script_dir_requested=${0%/*} ;;
+    *) script_dir_requested=. ;;
+esac
 script_dir_logical=$(CDPATH= cd -- "$script_dir_requested" && pwd -L)
 script_dir=$(CDPATH= cd -- "$script_dir_requested" && pwd -P)
-if [ "$script_dir_logical" != "$script_dir" ]; then
+
+has_untrusted_posix_alias() {
+    logical_path=$1
+    physical_path=$2
+    expected_path=$logical_path
+    case "$logical_path" in
+        /etc|/tmp|/var|/etc/*|/tmp/*|/var/*) expected_path=/private$logical_path ;;
+    esac
+    [ "$expected_path" != "$physical_path" ] && [ "$logical_path" != "$physical_path" ]
+}
+
+if [ -z "${MSYSTEM:-}" ] && has_untrusted_posix_alias "$script_dir_logical" "$script_dir"; then
     printf 'Refusing to install from a filesystem alias.\n' >&2
     exit 2
 fi
-repo_root=$(CDPATH= cd -- "$script_dir/.." && pwd -P)
-source_catalog_requested="$repo_root/skills"
+repo_root_requested=$(CDPATH= cd -- "$script_dir_logical/.." && pwd -L)
+source_catalog_requested="$repo_root_requested/skills"
 destination=${SKILLS_INSTALL_DIR:-"$HOME/.agents/skills"}
 
 if [ -z "${MSYSTEM:-}" ]; then
@@ -223,7 +237,7 @@ fi
 
 assert_no_windows_reparse_path "$source_catalog_requested"
 source_catalog=$(CDPATH= cd -- "$source_catalog_requested" && pwd -P)
-if [ "$source_catalog_requested" != "$source_catalog" ]; then
+if [ -z "${MSYSTEM:-}" ] && has_untrusted_posix_alias "$source_catalog_requested" "$source_catalog"; then
     printf 'Refusing to install from a filesystem alias.\n' >&2
     exit 2
 fi
@@ -239,7 +253,7 @@ done
 assert_no_windows_reparse_path "$existing"
 existing_logical=$(CDPATH= cd -- "$existing" && pwd -L)
 existing_physical=$(CDPATH= cd -- "$existing" && pwd -P)
-if [ "$existing_logical" != "$existing_physical" ]; then
+if [ -z "${MSYSTEM:-}" ] && has_untrusted_posix_alias "$existing_logical" "$existing_physical"; then
     printf 'Refusing to install through a filesystem alias.\n' >&2
     exit 2
 fi
