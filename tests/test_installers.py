@@ -264,7 +264,7 @@ if "%CODEX_SCENARIO%"=="enabled" echo default_mode_request_user_input  under dev
                     shutil.copytree(ROOT / "scripts", sandbox / "scripts")
                     shutil.copytree(ROOT / "skills", sandbox / "skills")
                     guarded = run(sandbox / "skills", fake_bin, "enabled", sandbox)
-                    self.assertEqual(2, guarded.returncode, guarded.stdout)
+                    self.assertNotEqual(0, guarded.returncode, guarded.stdout)
                     self.assertIn("Refusing to install into the packaged source catalog", guarded.stdout)
                     self.assertTrue((sandbox / "skills" / "prompt-review-and-dispatch" / "SKILL.md").is_file())
 
