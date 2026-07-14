@@ -27,6 +27,9 @@ class RepositoryTests(unittest.TestCase):
     def test_installers_use_documented_isolatable_destination(self) -> None:
         self.assertEqual([], checks.check_install_destinations())
 
+    def test_native_decisions_share_one_enforced_contract(self) -> None:
+        self.assertEqual([], checks.check_native_input_contract())
+
     def test_skill_catalog_matches_directories(self) -> None:
         readme = (ROOT / "README.md").read_text(encoding="utf-8")
         skills = sorted(path.name for path in (ROOT / "skills").iterdir() if path.is_dir())

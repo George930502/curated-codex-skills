@@ -31,6 +31,9 @@ jobs:
         with:
           python-version: "3.11"
 
+      - name: Report environment
+        run: python -c "import platform, sys; print(sys.version); print(platform.platform())"
+
       - name: Validate skills
         run: python -I scripts/validate.py --skills-dir skills
 
@@ -40,56 +43,37 @@ jobs:
       - name: Run unit tests
         run: python -m unittest discover -s tests -v
 
-      - name: Smoke-test shell installer
-        if: runner.os != 'Windows'
-        shell: bash
-        run: |
-          test_root=$(mktemp -d)
-          trap 'rm -rf "$test_root"' EXIT
-          mkdir -p "$test_root/bin"
-          printf '%s\n' '#!/usr/bin/env sh' 'printf "%s  under development  true\n" "default_mode_request_user_input"' > "$test_root/bin/codex"
-          chmod +x "$test_root/bin/codex"
-          output=$(PATH="$test_root/bin:$PATH" SKILLS_INSTALL_DIR="$test_root/skills" bash scripts/install.sh 2>&1)
-          printf '%s\n' "$output"
-          expected=$(find skills -mindepth 1 -maxdepth 1 -type d | wc -l | tr -d ' ')
-          test "$(find "$test_root/skills" -mindepth 1 -maxdepth 1 -type d | wc -l | tr -d ' ')" = "$expected"
-          printf '%s\n' "$output" | grep -F 'default_mode_request_user_input is enabled.'
-          python -I scripts/validate.py --skills-dir "$test_root/skills"
-          printf '%s\n' '#!/usr/bin/env sh' 'printf "%s  under development  false\n" "default_mode_request_user_input"' > "$test_root/bin/codex"
-          disabled=$(PATH="$test_root/bin:$PATH" SKILLS_INSTALL_DIR="$test_root/skills-disabled" bash scripts/install.sh 2>&1)
-          printf '%s\n' "$disabled" | grep -F 'default_mode_request_user_input is disabled'
+  python-versions:
+    name: Python / ${{ matrix.python }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.10", "3.11", "3.12", "3.13", "3.14"]
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
 
-      - name: Smoke-test PowerShell installer
-        if: runner.os == 'Windows'
-        shell: pwsh
+      - name: Set up Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+        with:
+          python-version: ${{ matrix.python }}
+
+      - name: Run validation suite
         run: |
-          $testRoot = Join-Path $env:RUNNER_TEMP ([guid]::NewGuid().ToString())
-          $fakeBin = Join-Path $testRoot 'bin'
-          $destination = Join-Path $testRoot 'skills'
-          New-Item -ItemType Directory -Force -Path $fakeBin | Out-Null
-          @('@echo off', 'echo default_mode_request_user_input  under development  true') |
-            Set-Content -Encoding ascii (Join-Path $fakeBin 'codex.cmd')
-          $env:PATH = "$fakeBin;$env:PATH"
-          $output = & powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\install.ps1 -Destination $destination 2>&1
-          $output | Write-Output
-          $expected = @(Get-ChildItem -LiteralPath .\skills -Directory).Count
-          if (@(Get-ChildItem -LiteralPath $destination -Directory).Count -ne $expected) { throw 'Installed skill count differs from catalog.' }
-          if (($output -join "`n") -notmatch 'default_mode_request_user_input is enabled') { throw 'Native-input diagnostic failed.' }
-          python -I scripts/validate.py --skills-dir $destination
-          @('@echo off', 'echo default_mode_request_user_input  under development  false') |
-            Set-Content -Encoding ascii (Join-Path $fakeBin 'codex.cmd')
-          $disabledDestination = Join-Path $testRoot 'skills-disabled'
-          $disabled = & powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\install.ps1 -Destination $disabledDestination 2>&1
-          if (($disabled -join "`n") -notmatch 'default_mode_request_user_input is disabled') { throw 'Disabled-feature diagnostic failed.' }
-          Remove-Item -LiteralPath $testRoot -Recurse -Force
+          python -VV
+          python -I scripts/validate.py --skills-dir skills
+          python scripts/check_repository.py
+          python -m unittest discover -s tests -v
 
   result:
     name: CI
     if: always()
-    needs: cross-platform
+    needs: [cross-platform, python-versions]
     runs-on: ubuntu-latest
     steps:
       - name: Require all platform checks
         env:
-          RESULT: ${{ needs.cross-platform.result }}
-        run: test "$RESULT" = success
+          CROSS_PLATFORM_RESULT: ${{ needs.cross-platform.result }}
+          PYTHON_RESULT: ${{ needs.python-versions.result }}
+        run: test "$CROSS_PLATFORM_RESULT" = success && test "$PYTHON_RESULT" = success

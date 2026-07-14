@@ -28,6 +28,8 @@ REQUIRED_FILES = (
     "docs/agents/issue-tracker.md",
     "docs/compatibility.md",
     "docs/releasing.md",
+    "docs/specs/production-v0.1.1.md",
+    "docs/testing-strategy.md",
 )
 USES = re.compile(r"(?m)^\s*uses:\s*[^@\s]+@(?P<ref>[^\s#]+)")
 
@@ -96,6 +98,38 @@ def check_install_destinations() -> list[str]:
     return errors
 
 
+def check_native_input_contract() -> list[str]:
+    contract_path = ROOT / "skills" / "grilling" / "NATIVE-INPUT.md"
+    contract = contract_path.read_text(encoding="utf-8")
+    normalized = " ".join(contract.split())
+    required = (
+        "exactly one question",
+        "omit `autoResolutionMs`",
+        "(Recommended)",
+        "client adds the free-form `Other` choice",
+        "an empty answer change no state",
+        "A prose question is not a substitute",
+        "`目的已對齊 (Recommended)`",
+        "`同意 (Recommended)`",
+    )
+    errors = [
+        f"{contract_path.relative_to(ROOT)}: missing required native-input rule {rule!r}"
+        for rule in required
+        if rule not in normalized
+    ]
+    consumers = (
+        "skills/domain-modeling/SKILL.md",
+        "skills/grilling/SKILL.md",
+        "skills/prompt-master-gpt5/SKILL.md",
+        "skills/prompt-review-and-dispatch/SKILL.md",
+        "skills/prompt-review-and-dispatch/references/approval-protocol.md",
+    )
+    for relative in consumers:
+        if "NATIVE-INPUT.md" not in (ROOT / relative).read_text(encoding="utf-8"):
+            errors.append(f"{relative}: must reference the native-input contract")
+    return errors
+
+
 def main() -> int:
     errors = [
         f"missing required file: {relative}"
@@ -106,6 +140,7 @@ def main() -> int:
     errors.extend(check_identity())
     errors.extend(check_workflows())
     errors.extend(check_install_destinations())
+    errors.extend(check_native_input_contract())
     version = (ROOT / "VERSION").read_text(encoding="utf-8").strip() if (ROOT / "VERSION").is_file() else ""
     if not re.fullmatch(r"\d+\.\d+\.\d+", version):
         errors.append("VERSION must contain one SemVer core version")

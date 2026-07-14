@@ -27,6 +27,12 @@ codex features list | Select-String "default_mode_request_user_input"
 default_mode_request_user_input  under development  false
 ```
 
+This capability is intentionally detected by name and effective state rather
+than by a guessed minimum Codex version. It was directly observed as enabled
+with `codex-cli 0.144.1` on 2026-07-14, but the feature remains marked
+`under development`; older or newer clients must still pass the capability
+check.
+
 ## Enable it from PowerShell
 
 Persistently enable the feature through Codex itself:

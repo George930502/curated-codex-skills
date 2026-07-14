@@ -5,6 +5,22 @@ Versions use [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-07-14
+
+### Fixed
+
+- Make upgrades replace each catalog-owned skill so removed files cannot remain
+  installed, while preserving unrelated user skills.
+- Distinguish missing, disabled, malformed, and failed Codex native-input
+  capability diagnostics.
+
+### Changed
+
+- Exercise installers with spaces, Unicode, collisions, repeat installs, source
+  parity, Windows PowerShell 5.1, PowerShell 7, Git Bash, and failure fixtures.
+- Validate Python 3.10 through 3.14 in addition to Linux, macOS, and Windows.
+- Enforce the shared persistent native-input contract as a repository invariant.
+
 ## [0.1.0] - 2026-07-14
 
 ### Added
@@ -15,5 +31,6 @@ Versions use [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Self-contained validation, repository checks, and Linux/macOS/Windows CI.
 - Contribution, security, support, governance, provenance, and release contracts.
 
-[Unreleased]: https://github.com/George930502/curated-codex-skills/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/George930502/curated-codex-skills/compare/v0.1.1...HEAD
+[0.1.1]: https://github.com/George930502/curated-codex-skills/releases/tag/v0.1.1
 [0.1.0]: https://github.com/George930502/curated-codex-skills/releases/tag/v0.1.0
