@@ -22,3 +22,9 @@ Acceptance requires:
 The release must not move `v0.1.0`, mutate a real user home or global Codex
 configuration, require live credentials in CI, weaken approval or dispatch,
 discard notices, or claim universal hardware, client, or version compatibility.
+
+Review sequencing is intentionally two-phase: fresh reviewers assess the
+candidate diff and release readiness before publication, so the not-yet-created
+protected-main run, tag, and release are gates rather than candidate defects.
+After clean reviews, merge and protected-main CI must pass before the tag is
+created; final verification then proves the publication requirements above.
