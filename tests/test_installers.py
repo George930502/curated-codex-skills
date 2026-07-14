@@ -154,6 +154,36 @@ if "%CODEX_SCENARIO%"=="enabled" echo default_mode_request_user_input  under dev
             check=False,
         )
 
+    def run_shell_dot_segment(
+        self,
+        executable: str,
+        base: Path,
+        repository: Path = ROOT,
+    ) -> subprocess.CompletedProcess[str]:
+        environment = os.environ.copy()
+        if os.name == "nt":
+            environment["TEST_BASE"] = str(base)
+            command = [
+                executable,
+                "-lc",
+                'base=$(cygpath -u "$TEST_BASE"); '
+                'SKILLS_INSTALL_DIR="$base/unresolved/../destination" bash scripts/install.sh',
+            ]
+        else:
+            environment["SKILLS_INSTALL_DIR"] = str(base / "unresolved" / ".." / "destination")
+            command = [executable, str(repository / "scripts" / "install.sh")]
+        return subprocess.run(
+            command,
+            cwd=repository,
+            env=environment,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            check=False,
+        )
+
     def run_powershell(
         self,
         executable: str,
@@ -377,6 +407,19 @@ if "%CODEX_SCENARIO%"=="enabled" echo default_mode_request_user_input  under dev
     def test_source_and_alias_guards(self) -> None:
         for adapter_name, run in self.adapters():
             with self.subTest(adapter=adapter_name):
+                if adapter_name in {"bash", "git-bash"}:
+                    base = self.root / adapter_name / "dot segment guard"
+                    base.mkdir(parents=True)
+                    executable = (
+                        str(Path(os.environ.get("ProgramFiles", r"C:\Program Files")) / "Git" / "bin" / "bash.exe")
+                        if adapter_name == "git-bash"
+                        else shutil.which("bash") or "bash"
+                    )
+                    dot_segment = self.run_shell_dot_segment(executable, base)
+                    self.assertNotEqual(0, dot_segment.returncode, dot_segment.stdout)
+                    self.assertIn("Refusing to install through an unresolved parent segment", dot_segment.stdout)
+                    self.assertEqual([], list(base.iterdir()))
+
                 sandbox = self.root / adapter_name / "guard repo"
                 shutil.copytree(ROOT / "scripts", sandbox / "scripts")
                 shutil.copytree(ROOT / "skills", sandbox / "skills")

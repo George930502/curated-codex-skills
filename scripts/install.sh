@@ -6,6 +6,13 @@ repo_root=$(CDPATH= cd -- "$script_dir/.." && pwd -P)
 source_catalog="$repo_root/skills"
 destination=${SKILLS_INSTALL_DIR:-"$HOME/.agents/skills"}
 
+case "/$destination/" in
+    */../*)
+        printf 'Refusing to install through an unresolved parent segment.\n' >&2
+        exit 2
+        ;;
+esac
+
 is_subst_path() {
     command -v cygpath >/dev/null 2>&1 || return 1
     command -v subst.exe >/dev/null 2>&1 || return 1

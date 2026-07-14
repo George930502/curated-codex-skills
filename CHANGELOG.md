@@ -16,7 +16,7 @@ Versions use [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   capability diagnostics.
 - Refuse destructive install destinations at the filesystem root or inside the
   packaged source catalog; canonicalize POSIX aliases and reject Windows
-  reparse or substituted-drive aliases.
+  reparse or substituted-drive aliases without creating rejected paths.
 
 ### Changed
 
