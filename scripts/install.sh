@@ -163,7 +163,24 @@ for skill in "$source_catalog"/*; do
     [ -d "$skill" ] || continue
     name=${skill##*/}
     target="$destination/$name"
+    for stale_transaction in "$destination/.$name.install."*; do
+        marker="$stale_transaction/.curated-codex-skills-transaction"
+        transaction_name=
+        if [ -d "$stale_transaction" ] && [ -f "$marker" ] &&
+            IFS= read -r transaction_name < "$marker" && [ "$transaction_name" = "$name" ]; then
+            if ! rm -rf "$stale_transaction"; then
+                printf 'Warning: could not remove stale transaction %s.\n' "$stale_transaction" >&2
+            fi
+        fi
+    done
     transaction=$(mktemp -d "$destination/.$name.install.XXXXXX")
+    if printf '%s\n' "$name" > "$transaction/.curated-codex-skills-transaction"; then
+        :
+    else
+        status=$?
+        rm -rf "$transaction"
+        exit "$status"
+    fi
     staging="$transaction/new"
     backup="$transaction/old"
     if cp -R "$skill" "$staging"; then

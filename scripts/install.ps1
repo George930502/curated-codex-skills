@@ -110,10 +110,28 @@ if (Test-PathAtOrBelow $destination $source) {
 $skills = @(Get-ChildItem -LiteralPath $source -Directory)
 foreach ($skill in $skills) {
     $target = Join-Path $destination $skill.Name
+    foreach ($staleTransaction in @(Get-ChildItem -LiteralPath $destination -Directory -Force -Filter ('.{0}.install.*' -f $skill.Name))) {
+        $marker = Join-Path $staleTransaction.FullName '.curated-codex-skills-transaction'
+        if (-not ($staleTransaction.Attributes -band [System.IO.FileAttributes]::ReparsePoint) -and
+            (Test-Path -LiteralPath $marker -PathType Leaf) -and
+            (Get-Content -LiteralPath $marker -Raw).TrimEnd("`r", "`n") -eq $skill.Name) {
+            try {
+                Remove-Entry $staleTransaction.FullName
+            } catch {
+                Write-Warning "Could not remove stale transaction $($staleTransaction.FullName)."
+            }
+        }
+    }
     $transaction = Join-Path $destination ('.{0}.install.{1}' -f $skill.Name, [guid]::NewGuid())
     $staging = Join-Path $transaction 'new'
     $backup = Join-Path $transaction 'old'
     New-Item -ItemType Directory -Path $transaction | Out-Null
+    try {
+        Set-Content -LiteralPath (Join-Path $transaction '.curated-codex-skills-transaction') -Value $skill.Name
+    } catch {
+        Remove-Entry $transaction
+        throw
+    }
     try {
         Copy-Item -LiteralPath $skill.FullName -Destination $staging -Recurse -Force
     } catch {

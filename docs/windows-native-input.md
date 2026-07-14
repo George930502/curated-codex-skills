@@ -28,10 +28,10 @@ default_mode_request_user_input  under development  false
 ```
 
 This capability is intentionally detected by name and effective state rather
-than by a guessed minimum Codex version. It was directly observed as enabled
-with `codex-cli 0.144.1` on 2026-07-14, but the feature remains marked
-`under development`; older or newer clients must still pass the capability
-check.
+than by a guessed minimum Codex version. A Linux Codex desktop task directly
+observed it as enabled with `codex-cli 0.144.1` on 2026-07-14; that is not
+Windows client evidence. The feature remains marked `under development`, so
+every Windows client must pass the capability check directly.
 
 ## Enable it from PowerShell
 

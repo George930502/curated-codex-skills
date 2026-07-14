@@ -11,6 +11,7 @@ import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
 FEATURE = "default_mode_request_user_input"
+TRANSACTION_MARKER = ".curated-codex-skills-transaction"
 EXPECTED_DIAGNOSTICS = {
     "enabled": f"{FEATURE} is enabled.",
     "enabled-crlf": f"{FEATURE} is enabled.",
@@ -570,18 +571,30 @@ if "%CODEX_SCENARIO%"=="enabled-crlf" echo default_mode_request_user_input  unde
     def test_post_commit_cleanup_failure_is_nonfatal(self) -> None:
         for adapter_name, run in self.adapters():
             with self.subTest(adapter=adapter_name):
-                if adapter_name in {"powershell", "pwsh"}:
-                    continue
                 destination = self.root / adapter_name / "cleanup failure"
                 installed = run(destination, self.fake_bin, "enabled")
                 self.assertEqual(0, installed.returncode, installed.stdout)
 
-                failing_bin = self.root / adapter_name / "failing cleanup bin"
-                self.write_failing_cleanup(failing_bin)
-                result = run(destination, failing_bin, "missing-cli")
+                first_skill = sorted(path.name for path in (ROOT / "skills").iterdir() if path.is_dir())[0]
+                stale = destination / f".{first_skill}.install.test-residue"
+                (stale / "old").mkdir(parents=True)
+                (stale / TRANSACTION_MARKER).write_text(f"{first_skill}\n", encoding="utf-8")
+                recovered = run(destination, self.fake_bin, "enabled")
+                self.assertEqual(0, recovered.returncode, recovered.stdout)
+                self.assertFalse(stale.exists(), recovered.stdout)
 
-                self.assertEqual(0, result.returncode, result.stdout)
-                self.assertIn("could not remove transaction", result.stdout)
+                if adapter_name not in {"powershell", "pwsh"}:
+                    failing_bin = self.root / adapter_name / "failing cleanup bin"
+                    self.write_failing_cleanup(failing_bin)
+                    result = run(destination, failing_bin, "missing-cli")
+
+                    self.assertEqual(0, result.returncode, result.stdout)
+                    self.assertIn("could not remove transaction", result.stdout)
+                    self.assertTrue(list(destination.glob(".*.install.*")), result.stdout)
+
+                    recovered = run(destination, self.fake_bin, "enabled")
+                    self.assertEqual(0, recovered.returncode, recovered.stdout)
+                    self.assertFalse(list(destination.glob(".*.install.*")), recovered.stdout)
                 self.assert_source_parity(destination)
 
     def test_source_and_alias_guards(self) -> None:
