@@ -19,7 +19,7 @@ analyzed the Python code at the same commit. The later commit that records these
 immutable run links changes this evidence document only. The `v0.1.0` tag
 remains immutable.
 
-## v0.1.1 candidate matrix
+## Published v0.1.1
 
 | Dimension | Executed coverage | Evidence boundary |
 |---|---|---|
@@ -42,21 +42,39 @@ installer. The release notes link the later protected-main runs because their
 identifiers cannot exist in this candidate commit without a self-referential
 evidence update.
 
+Protected main subsequently passed [CI run
+29331389046](https://github.com/George930502/curated-codex-skills/actions/runs/29331389046)
+and [CodeQL run
+29331389139](https://github.com/George930502/curated-codex-skills/actions/runs/29331389139)
+at the immutable `v0.1.1` commit `5e3d3cf`.
+
+## v0.1.2 evidence boundary
+
+The `v0.1.2` change affects only agent-authored native-control language and its
+repository checks. It does not change installer behavior or broaden the
+platform matrix above. Release still requires the complete Linux, macOS,
+Windows, and Python matrix because installed source parity and all five skill
+contracts are validated on every candidate.
+
 ## Direct native-input observation
 
 Manual scenario: invoke `$prompt-review-and-dispatch` with an incomplete prompt
 in a Default-mode desktop task; select the native alignment choice; inspect the
 displayed exact draft; leave or return an empty approval answer and confirm no
-dispatch; resume the task; then select native `同意` and confirm one thread-send
-result.
+dispatch; resume the task; then select the native approval option and confirm
+one thread-send result.
 
 On 2026-07-14, the active Codex desktop task on Linux reported
 `codex-cli 0.144.1` with `default_mode_request_user_input` enabled. The task
-displayed persistent native alignment and approval controls, accepted explicit
-clickable selections, preserved state after empty answers, and dispatched only
-after `同意` was selected. This is a reproducible manual report for that observed
-client and configuration, but it has no retained independent GUI artifact and
-is not an independently auditable or universal client/version claim.
+displayed the English `Aligned (Recommended)` and `Approve (Recommended)`
+controls, accepted explicit clickable selections, preserved state after empty
+answers, and dispatched only after approval was selected. This is a
+reproducible manual report for that observed client and configuration, but it
+has no retained independent GUI artifact and is not an independently auditable
+or universal client/version claim.
+The current contract makes every agent-authored native-control string English
+by default while normal assistant prose remains language-adaptive. The client
+controls the displayed label and localization of its built-in `Other` choice.
 The checked-in contract requires the same unanswered control to be reissued
 without a retry limit while the task remains active. Repository checks enforce
 that requirement statically; they do not prove how every client renders or
@@ -65,6 +83,6 @@ The clarification/grilling control was not separately recorded in this manual
 observation; its coverage is limited to the static contract and executable
 capability fixtures above.
 
-WSL and historical Codex binaries remain unverified surfaces for `v0.1.1`.
+WSL and historical Codex binaries remain unverified surfaces for `v0.1.2`.
 They use the capability policy: install may succeed, but workflows block if the
 active client does not expose native input or task dispatch.

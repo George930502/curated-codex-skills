@@ -5,6 +5,15 @@ Versions use [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.1.2] - 2026-07-14
+
+### Changed
+
+- Default every agent-authored native clickable control to English while
+  preserving language-adaptive assistant responses.
+- Require the canonical English alignment and approval labels mechanically,
+  while leaving the client-provided `Other` label and localization to the host.
+
 ## [0.1.1] - 2026-07-14
 
 ### Fixed
@@ -36,6 +45,7 @@ Versions use [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Self-contained validation, repository checks, and Linux/macOS/Windows CI.
 - Contribution, security, support, governance, provenance, and release contracts.
 
-[Unreleased]: https://github.com/George930502/curated-codex-skills/compare/v0.1.1...HEAD
+[Unreleased]: https://github.com/George930502/curated-codex-skills/compare/v0.1.2...HEAD
+[0.1.2]: https://github.com/George930502/curated-codex-skills/releases/tag/v0.1.2
 [0.1.1]: https://github.com/George930502/curated-codex-skills/releases/tag/v0.1.1
 [0.1.0]: https://github.com/George930502/curated-codex-skills/releases/tag/v0.1.0

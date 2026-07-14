@@ -15,8 +15,13 @@ Call `request_user_input` with exactly one question and omit
 - the recommended option first, with `(Recommended)` appended to its label;
 - one sentence per option explaining the trade-off.
 
+Write every agent-authored header, question, option label, and option
+description in English, regardless of the conversation language. Normal
+assistant prose remains language-adaptive.
+
 The Codex client adds the free-form `Other` choice. Preserve an `Other` answer
-verbatim. Do not add a custom field or simulate controls with Markdown.
+verbatim. Its displayed label and localization are host-controlled. Do not add
+a custom field or simulate controls with Markdown.
 
 ## Lifecycle
 
@@ -35,10 +40,14 @@ the missing capability. A prose question is not a substitute.
 
 ## Required gates
 
-- Grilling: ask the highest-impact unresolved decision, then recompute.
-- Alignment: offer `目的已對齊 (Recommended)` and `仍需釐清`; `Other` is custom feedback.
-- Approval: offer `同意 (Recommended)` and `不同意`; only the first authorizes dispatch.
-- Rejection: offer two or three reason categories; `Other` carries the user's exact reason.
+- Grilling: ask the highest-impact unresolved decision in English, then
+  recompute.
+- Alignment: offer `Aligned (Recommended)` and `Needs revision`; `Other` is
+  custom feedback.
+- Approval: offer `Approve (Recommended)` and `Reject`; only the first
+  authorizes dispatch.
+- Rejection: offer two or three English reason categories; `Other` carries the
+  user's exact reason.
 
 Completion requires an explicit native selection; inference from prose or
 inactivity is invalid.
