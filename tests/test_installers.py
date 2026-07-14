@@ -142,7 +142,12 @@ if "%CODEX_SCENARIO%"=="enabled" echo default_mode_request_user_input  under dev
             )
             return
 
-        found = {name: shutil.which(name) for name in ("powershell", "pwsh", "bash")}
+        git_bash = Path(os.environ.get("ProgramFiles", r"C:\Program Files")) / "Git" / "bin" / "bash.exe"
+        found = {
+            "powershell": shutil.which("powershell"),
+            "pwsh": shutil.which("pwsh"),
+            "bash": str(git_bash) if git_bash.is_file() else None,
+        }
         if os.environ.get("GITHUB_ACTIONS"):
             self.assertTrue(all(found.values()), f"missing CI shells: {found}")
         identities = {}
