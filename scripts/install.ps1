@@ -115,6 +115,16 @@ foreach ($skill in $skills) {
         if (-not ($staleTransaction.Attributes -band [System.IO.FileAttributes]::ReparsePoint) -and
             (Test-Path -LiteralPath $marker -PathType Leaf) -and
             (Get-Content -LiteralPath $marker -Raw).TrimEnd("`r", "`n") -eq $skill.Name) {
+            $staleBackup = Join-Path $staleTransaction.FullName 'old'
+            $targetExists = $null -ne (Get-Item -LiteralPath $target -Force -ErrorAction SilentlyContinue)
+            $backupExists = $null -ne (Get-Item -LiteralPath $staleBackup -Force -ErrorAction SilentlyContinue)
+            if (-not $targetExists -and $backupExists) {
+                try {
+                    Move-Item -LiteralPath $staleBackup -Destination $target
+                } catch {
+                    throw "Could not restore interrupted transaction $($staleTransaction.FullName)."
+                }
+            }
             try {
                 Remove-Entry $staleTransaction.FullName
             } catch {

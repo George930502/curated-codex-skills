@@ -582,6 +582,10 @@ if "%CODEX_SCENARIO%"=="enabled-crlf" echo default_mode_request_user_input  unde
                 marker = affected_target / "preserve-on-failure.txt"
                 marker.write_text("working install", encoding="utf-8")
                 before_failure = self.snapshot_tree(affected_target)
+                interrupted = destination / f".{first_skill}.install.interrupted"
+                interrupted.mkdir()
+                shutil.move(str(affected_target), str(interrupted / "old"))
+                (interrupted / TRANSACTION_MARKER).write_bytes(f"{first_skill}\r\n".encode())
                 if adapter_name in {"powershell", "pwsh"}:
                     failed_copy = self.run_powershell_copy_failure(
                         shutil.which(adapter_name) or adapter_name,
@@ -593,6 +597,7 @@ if "%CODEX_SCENARIO%"=="enabled-crlf" echo default_mode_request_user_input  unde
                     failed_copy = run(destination, failing_bin, "enabled")
                 self.assertNotEqual(0, failed_copy.returncode, failed_copy.stdout)
                 self.assertEqual(before_failure, self.snapshot_tree(affected_target), failed_copy.stdout)
+                self.assertFalse(interrupted.exists(), failed_copy.stdout)
 
                 if adapter_name in {"powershell", "pwsh"}:
                     failed_swap = self.run_powershell_swap_failure(

@@ -184,8 +184,18 @@ for skill in "$source_catalog"/*; do
         if [ -d "$stale_transaction" ] && [ -f "$marker" ] &&
             IFS= read -r transaction_name < "$marker"; then
             transaction_name=${transaction_name%$'\r'}
-            if [ "$transaction_name" = "$name" ] && ! rm -rf "$stale_transaction"; then
-                printf 'Warning: could not remove stale transaction %s.\n' "$stale_transaction" >&2
+            if [ "$transaction_name" = "$name" ]; then
+                stale_backup="$stale_transaction/old"
+                if [ ! -e "$target" ] && [ ! -L "$target" ] &&
+                    { [ -e "$stale_backup" ] || [ -L "$stale_backup" ]; }; then
+                    if ! mv "$stale_backup" "$target"; then
+                        printf 'Could not restore interrupted transaction %s.\n' "$stale_transaction" >&2
+                        exit 2
+                    fi
+                fi
+                if ! rm -rf "$stale_transaction"; then
+                    printf 'Warning: could not remove stale transaction %s.\n' "$stale_transaction" >&2
+                fi
             fi
         fi
     done

@@ -27,7 +27,8 @@ native GitHub matrix and the existing `unittest` suite.
   environment changes. Run logs record the actual Python and platform strings.
 - Installer tests cover spaces, Unicode, collisions, idempotent upgrades,
   failed-copy retention, failed-swap rollback, non-fatal Bash/Git Bash
-  post-commit cleanup failure, marked transaction recovery, stale-file removal,
+  post-commit cleanup failure, marked transaction cleanup and interrupted-backup
+  recovery, stale-file removal,
   unrelated-skill and nested-junction target preservation, exact source parity,
   unresolved-parent rejection, source/destination alias, Windows
   substituted-drive with restricted and shadowed `PATH`, PowerShell and Git
