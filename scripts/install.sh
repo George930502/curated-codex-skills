@@ -125,6 +125,37 @@ assert_no_windows_reparse_path() {
     return 2
 }
 
+assert_no_windows_reparse_tree() {
+    [ -n "${MSYSTEM:-}" ] || return 0
+    windows_root=${SystemRoot:-${SYSTEMROOT:-C:\\Windows}}
+    powershell_path=$("$cygpath_path" -u "$windows_root")/System32/WindowsPowerShell/v1.0/powershell.exe
+    [ -x "$powershell_path" ] || {
+        printf 'Cannot inspect Windows filesystem aliases without powershell.exe.\n' >&2
+        return 2
+    }
+    windows_path=$("$cygpath_path" -w "$1")
+    if REPARSE_CHECK_PATH=$windows_path "$powershell_path" -NoProfile -NonInteractive -Command '
+        $pending = New-Object System.Collections.Stack
+        $pending.Push([IO.Path]::GetFullPath($env:REPARSE_CHECK_PATH))
+        while ($pending.Count -gt 0) {
+            foreach ($entry in Get-ChildItem -LiteralPath $pending.Pop() -Force) {
+                if ($entry.Attributes -band [IO.FileAttributes]::ReparsePoint) { exit 3 }
+                if ($entry.PSIsContainer) { $pending.Push($entry.FullName) }
+            }
+        }
+    ' >/dev/null; then
+        return 0
+    else
+        status=$?
+    fi
+    if [ "$status" -eq 3 ]; then
+        printf 'Refusing to install from a source filesystem alias.\n' >&2
+    else
+        printf 'Windows source filesystem alias inspection failed.\n' >&2
+    fi
+    return 2
+}
+
 transaction_marker_matches() {
     marker_path=$1
     expected_name=$2
@@ -173,9 +204,6 @@ assert_source_tree_no_aliases() {
             printf 'Refusing to install from a source filesystem alias.\n' >&2
             return 2
         fi
-        if [ -n "${MSYSTEM:-}" ]; then
-            assert_no_windows_reparse_path "$source_entry" || return $?
-        fi
         if [ -d "$source_entry" ]; then
             assert_source_tree_no_aliases "$source_entry" || return $?
         fi
@@ -193,6 +221,7 @@ if [ "$source_catalog_requested" != "$source_catalog" ]; then
     printf 'Refusing to install from a filesystem alias.\n' >&2
     exit 2
 fi
+assert_no_windows_reparse_tree "$source_catalog"
 assert_source_tree_no_aliases "$source_catalog"
 
 existing=$destination
