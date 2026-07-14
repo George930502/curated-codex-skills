@@ -51,6 +51,10 @@ class RepositoryTests(unittest.TestCase):
             with self.subTest(former_label=former_label):
                 changed = contract + "\n" + former_label
                 self.assertNotEqual([], checks.native_input_text_errors(changed))
+        negated = contract + (
+            "\nDo not write every agent-authored native-control label in English."
+        )
+        self.assertNotEqual([], checks.native_input_text_errors(negated))
 
     def test_approval_protocol_requires_exact_english_approval(self) -> None:
         protocol = (
@@ -65,6 +69,16 @@ class RepositoryTests(unittest.TestCase):
         for rule in checks.APPROVAL_RULES:
             with self.subTest(rule=rule):
                 changed = normalized.replace(rule, "removed", 1)
+                self.assertNotEqual([], checks.approval_protocol_errors(changed))
+        contradictions = (
+            "Approve (Recommended) does not authorize dispatch.",
+            "Reject authorizes dispatch.",
+            "Other may authorize dispatch.",
+            "Never rely on only Approve (Recommended) authorizes dispatch.",
+        )
+        for contradiction in contradictions:
+            with self.subTest(contradiction=contradiction):
+                changed = protocol + "\n" + contradiction
                 self.assertNotEqual([], checks.approval_protocol_errors(changed))
 
     def test_skill_catalog_matches_directories(self) -> None:

@@ -67,6 +67,39 @@ APPROVAL_RULES = (
     "dispatch",
     "prompt: draft (unchanged)",
 )
+CONTRADICTORY_NATIVE_RULES = (
+    (
+        "negates the English native-control requirement",
+        re.compile(
+            r"(?is)\b(?:do not|never|must not|need not)\b.{0,120}"
+            r"\b(?:agent-authored|native-control)\b.{0,120}\bEnglish\b"
+        ),
+    ),
+    (
+        "negates Approve authorization",
+        re.compile(
+            r"(?i)\bApprove \(Recommended\)[ \t]+"
+            r"(?:does[ \t]+not|cannot|must[ \t]+not|never)[ \t]+authorize\b"
+        ),
+    ),
+    (
+        "authorizes a non-approval answer",
+        re.compile(
+            r"(?i)\b(?:Reject|Other|blank|malformed|missing)\b"
+            r"(?:[ \t]+(?:answer|selection|response))?[ \t]+"
+            r"(?:authorizes?|may[ \t]+authorize|can[ \t]+authorize)[ \t]+"
+            r"dispatch\b"
+        ),
+    ),
+    (
+        "negates the only-Approve rule",
+        re.compile(
+            r"(?i)\b(?:do not|never|must not|cannot)\b[^\n.!?]{0,120}\bonly\b"
+            r"[^\n.!?]{0,80}\bApprove \(Recommended\)"
+            r"[^\n.!?]{0,80}\bauthorizes?\b"
+        ),
+    ),
+)
 
 
 def markdown_files() -> list[Path]:
@@ -159,16 +192,27 @@ def native_input_text_errors(contract: str) -> list[str]:
         for label in FORMER_NATIVE_LABELS
         if label in contract
     )
+    errors.extend(
+        f"contains contradictory native-input rule: {name}"
+        for name, pattern in CONTRADICTORY_NATIVE_RULES
+        if pattern.search(contract)
+    )
     return errors
 
 
 def approval_protocol_errors(protocol: str) -> list[str]:
     normalized = " ".join(protocol.split())
-    return [
+    errors = [
         f"missing required approval rule {rule!r}"
         for rule in APPROVAL_RULES
         if rule not in normalized
     ]
+    errors.extend(
+        f"contains contradictory approval rule: {name}"
+        for name, pattern in CONTRADICTORY_NATIVE_RULES
+        if pattern.search(protocol)
+    )
+    return errors
 
 
 def check_native_input_contract() -> list[str]:
