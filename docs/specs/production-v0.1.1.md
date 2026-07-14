@@ -15,8 +15,9 @@ Acceptance requires:
 - separate static-contract, executable-fixture, and directly observed native UI
   evidence, without presenting fixtures as GUI proof;
 - current primary-source testing decisions and explicit unsupported surfaces;
-- green protected CI and CodeQL plus fresh Standards, Spec, and Claude reviews
-  with no findings;
+- green protected CI and CodeQL plus fresh Standards and Spec reviews with no
+  findings; run a fresh read-only Claude review when available, but record and
+  ignore a Claude session-limit failure rather than blocking the release;
 - an annotated public `v0.1.1` prerelease synchronized with `origin/main`.
 
 The release must not move `v0.1.0`, mutate a real user home or global Codex
