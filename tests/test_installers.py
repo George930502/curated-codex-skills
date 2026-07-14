@@ -507,22 +507,27 @@ if "%CODEX_SCENARIO%"=="enabled" echo default_mode_request_user_input  under dev
                 self.assertNotEqual(0, guarded.returncode, guarded.stdout)
                 self.assertIn("Refusing to install into the packaged source catalog", guarded.stdout)
 
-                alias_message = (
+                source_alias_message = (
                     "Refusing to install through a filesystem alias"
-                    if adapter_name in {"powershell", "pwsh", "git-bash"}
+                    if adapter_name in {"powershell", "pwsh"}
                     else "Refusing to install into the packaged source catalog"
                 )
                 repository_alias = self.root / adapter_name / "repository alias"
                 self.make_directory_link(repository_alias, sandbox)
                 aliased_source = run(sandbox / "skills", self.fake_bin, "enabled", repository_alias)
                 self.assertNotEqual(0, aliased_source.returncode, aliased_source.stdout)
-                self.assertIn(alias_message, aliased_source.stdout)
+                self.assertIn(source_alias_message, aliased_source.stdout)
 
                 destination_alias = sandbox / "source alias"
                 self.make_directory_link(destination_alias, sandbox / "skills")
                 aliased = run(destination_alias, self.fake_bin, "enabled", sandbox)
                 self.assertNotEqual(0, aliased.returncode, aliased.stdout)
-                self.assertIn(alias_message, aliased.stdout)
+                destination_alias_message = (
+                    "Refusing to install through a filesystem alias"
+                    if adapter_name in {"powershell", "pwsh", "git-bash"}
+                    else "Refusing to install into the packaged source catalog"
+                )
+                self.assertIn(destination_alias_message, aliased.stdout)
                 self.assertTrue((sandbox / "skills" / "prompt-review-and-dispatch" / "SKILL.md").is_file())
 
                 if adapter_name in {"bash", "git-bash"}:
