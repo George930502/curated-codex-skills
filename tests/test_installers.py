@@ -166,7 +166,7 @@ if "%CODEX_SCENARIO%"=="enabled" echo default_mode_request_user_input  under dev
                 self.assertEqual(expected, identities[name], result.stdout)
         if found["bash"]:
             result = subprocess.run(
-                [found["bash"] or "bash", "-lc", 'printf "%s" "$OSTYPE"'],
+                [found["bash"] or "bash", "-lc", 'printf "%s|%s" "$OSTYPE" "$MSYSTEM"'],
                 text=True,
                 encoding="utf-8",
                 errors="replace",
@@ -175,7 +175,7 @@ if "%CODEX_SCENARIO%"=="enabled" echo default_mode_request_user_input  under dev
                 check=False,
             )
             identities["bash"] = result.stdout.strip()
-            self.assertTrue(identities["bash"].startswith("msys"), result.stdout)
+            self.assertRegex(identities["bash"], r"^[^|]+\|MINGW(32|64|ARM64)$")
         print("WINDOWS_SHELL_IDENTITIES=" + ",".join(f"{key}:{value}" for key, value in identities.items()))
         for name in ("powershell", "pwsh"):
             if found[name]:
