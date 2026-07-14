@@ -225,19 +225,21 @@ for skill in "$source_catalog"/*; do
         printf 'Multiple interrupted transactions exist for %s; refusing ambiguous recovery.\n' "$name" >&2
         exit 2
     fi
-    for stale_transaction in "${valid_transactions[@]}"; do
-        stale_backup="$stale_transaction/old"
-        if [ ! -e "$target" ] && [ ! -L "$target" ] &&
-            { [ -e "$stale_backup" ] || [ -L "$stale_backup" ]; }; then
-            if ! mv "$stale_backup" "$target"; then
-                printf 'Could not restore interrupted transaction %s.\n' "$stale_transaction" >&2
-                exit 2
+    if [ "${#valid_transactions[@]}" -gt 0 ]; then
+        for stale_transaction in "${valid_transactions[@]}"; do
+            stale_backup="$stale_transaction/old"
+            if [ ! -e "$target" ] && [ ! -L "$target" ] &&
+                { [ -e "$stale_backup" ] || [ -L "$stale_backup" ]; }; then
+                if ! mv "$stale_backup" "$target"; then
+                    printf 'Could not restore interrupted transaction %s.\n' "$stale_transaction" >&2
+                    exit 2
+                fi
             fi
-        fi
-        if ! rm -rf "$stale_transaction"; then
-            printf 'Warning: could not remove stale transaction %s.\n' "$stale_transaction" >&2
-        fi
-    done
+            if ! rm -rf "$stale_transaction"; then
+                printf 'Warning: could not remove stale transaction %s.\n' "$stale_transaction" >&2
+            fi
+        done
+    fi
     transaction=$(mktemp -d "$destination/.$name.install.XXXXXX")
     if printf '%s\n' "$name" > "$transaction/.curated-codex-skills-transaction"; then
         :
