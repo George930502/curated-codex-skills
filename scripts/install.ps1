@@ -158,6 +158,16 @@ foreach ($skill in $skills) {
         if (-not (Test-TransactionMarker $marker $skill.Name)) {
             continue
         }
+        foreach ($transactionEntry in @(Get-ChildItem -LiteralPath $staleTransaction.FullName -Force)) {
+            if ($transactionEntry.Name -notin @('.curated-codex-skills-transaction', 'new', 'old')) {
+                throw "Refusing invalid transaction structure for $($skill.Name)."
+            }
+            if ($transactionEntry.Name -eq 'new' -and
+                (-not $transactionEntry.PSIsContainer -or
+                    $transactionEntry.Attributes -band [System.IO.FileAttributes]::ReparsePoint)) {
+                throw "Refusing invalid transaction structure for $($skill.Name)."
+            }
+        }
         $validTransactions += $staleTransaction
         $staleBackup = Join-Path $staleTransaction.FullName 'old'
         if ($null -ne (Get-Item -LiteralPath $staleBackup -Force -ErrorAction SilentlyContinue)) {

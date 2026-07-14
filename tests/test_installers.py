@@ -5,6 +5,7 @@ import os
 from pathlib import Path
 import shutil
 import subprocess
+import sys
 import tempfile
 import unittest
 
@@ -488,6 +489,21 @@ if "%CODEX_SCENARIO%"=="enabled-crlf" echo default_mode_request_user_input  unde
         alias = self.root / "top-level skill alias"
         self.make_directory_link(alias, source)
         self.assertTrue(validate.compare_packaged_skill(source, alias))
+        self.assertTrue(validate.compare_packaged_skill(alias, source))
+
+        catalog_alias = self.root / "catalog alias"
+        self.make_directory_link(catalog_alias, ROOT / "skills")
+        result = subprocess.run(
+            [sys.executable, "-I", str(ROOT / "scripts" / "validate.py"), "--skills-dir", str(catalog_alias)],
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            check=False,
+        )
+        self.assertNotEqual(0, result.returncode, result.stdout)
+        self.assertIn("catalog filesystem alias", result.stdout)
 
     def make_subst(self, target: Path) -> Path:
         for letter in "ZYXWVUTSRQPONMLKJIHGFED":
@@ -674,6 +690,20 @@ if "%CODEX_SCENARIO%"=="enabled-crlf" echo default_mode_request_user_input  unde
                 self.assertTrue(unrelated.is_file(), ignored.stdout)
                 shutil.rmtree(nonexact)
 
+                unexpected = destination / f".{last_skill}.install.unexpected"
+                unexpected.mkdir()
+                (unexpected / TRANSACTION_MARKER).write_bytes(f"{last_skill}\n".encode())
+                unexpected_sentinel = unexpected / "preserve.txt"
+                unexpected_sentinel.write_text("user owned", encoding="utf-8")
+                early_target_sentinel = target / "structure-preflight-sentinel.txt"
+                early_target_sentinel.write_text("must survive", encoding="utf-8")
+                rejected_structure = run(destination, self.fake_bin, "enabled")
+                self.assertNotEqual(0, rejected_structure.returncode, rejected_structure.stdout)
+                self.assertIn("invalid transaction structure", rejected_structure.stdout)
+                self.assertTrue(unexpected_sentinel.is_file(), rejected_structure.stdout)
+                self.assertTrue(early_target_sentinel.is_file(), rejected_structure.stdout)
+                shutil.rmtree(unexpected)
+
                 for suffix, marker_bytes in (
                     ("nul-before-newline", f"{first_skill}\0\n".encode()),
                     ("nul-after-newline", f"{first_skill}\n\0".encode()),
@@ -695,13 +725,13 @@ if "%CODEX_SCENARIO%"=="enabled-crlf" echo default_mode_request_user_input  unde
                 self.make_file_link(marker_alias_transaction / TRANSACTION_MARKER, external_marker)
                 marker_alias_sentinel = marker_alias_transaction / "preserve.txt"
                 marker_alias_sentinel.write_text("user owned", encoding="utf-8")
-                early_target_sentinel = target / "marker-preflight-sentinel.txt"
-                early_target_sentinel.write_text("must survive", encoding="utf-8")
+                marker_preflight_sentinel = target / "marker-preflight-sentinel.txt"
+                marker_preflight_sentinel.write_text("must survive", encoding="utf-8")
                 aliased_marker = run(destination, self.fake_bin, "enabled")
                 self.assertNotEqual(0, aliased_marker.returncode, aliased_marker.stdout)
                 self.assertIn("transaction marker filesystem alias", aliased_marker.stdout)
                 self.assertTrue(marker_alias_sentinel.is_file(), aliased_marker.stdout)
-                self.assertTrue(early_target_sentinel.is_file(), aliased_marker.stdout)
+                self.assertTrue(marker_preflight_sentinel.is_file(), aliased_marker.stdout)
                 shutil.rmtree(marker_alias_transaction)
 
                 outside = self.root / adapter_name / "forged transaction target"

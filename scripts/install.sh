@@ -216,6 +216,35 @@ for skill in "$source_catalog"/*; do
         fi
         [ -d "$stale_transaction" ] && [ -f "$marker" ] || continue
         transaction_marker_matches "$marker" "$name" || continue
+        transaction_entries=(
+            "$stale_transaction"/*
+            "$stale_transaction"/.[!.]*
+            "$stale_transaction"/..?*
+        )
+        for transaction_entry in "${transaction_entries[@]}"; do
+            [ -e "$transaction_entry" ] || [ -L "$transaction_entry" ] || continue
+            case "${transaction_entry##*/}" in
+                .curated-codex-skills-transaction | old)
+                    ;;
+                new)
+                    if [ -L "$transaction_entry" ] || [ ! -d "$transaction_entry" ]; then
+                        printf 'Refusing invalid transaction structure for %s.\n' "$name" >&2
+                        exit 2
+                    fi
+                    if [ -n "${MSYSTEM:-}" ]; then
+                        if assert_no_windows_reparse_path "$transaction_entry"; then
+                            :
+                        else
+                            exit $?
+                        fi
+                    fi
+                    ;;
+                *)
+                    printf 'Refusing invalid transaction structure for %s.\n' "$name" >&2
+                    exit 2
+                    ;;
+            esac
+        done
         recovery_transactions+=("$stale_transaction")
         recovery_transaction_names+=("$name")
         stale_backup="$stale_transaction/old"

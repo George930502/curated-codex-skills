@@ -162,8 +162,13 @@ def validate_skill(skill: Path) -> list[str]:
 
 def compare_packaged_skill(source: Path, candidate: Path) -> list[str]:
     """Require an installed catalog skill to match its packaged source exactly."""
-    candidate_metadata = candidate.lstat()
-    if candidate.is_symlink() or getattr(candidate_metadata, "st_file_attributes", 0) & 0x400:
+    def root_is_alias(root: Path) -> bool:
+        metadata = root.lstat()
+        return root.is_symlink() or bool(
+            getattr(metadata, "st_file_attributes", 0) & 0x400
+        )
+
+    if root_is_alias(source) or root_is_alias(candidate):
         return [f"{candidate}: installed content differs from packaged source"]
 
     def manifest(root: Path) -> dict[Path, tuple[str, bytes | str | None]]:
@@ -199,7 +204,14 @@ def main() -> int:
         help="directory containing skills (defaults to this checkout's skills)",
     )
     args = parser.parse_args()
-    skills_dir = args.skills_dir.expanduser().resolve()
+    requested_skills_dir = Path(os.path.abspath(args.skills_dir.expanduser()))
+    skills_dir = requested_skills_dir.resolve()
+    if requested_skills_dir != skills_dir:
+        print(
+            f"Refusing to validate through a catalog filesystem alias: {requested_skills_dir}",
+            file=sys.stderr,
+        )
+        return 2
     if not skills_dir.is_dir():
         print(f"Skills directory not found: {skills_dir}", file=sys.stderr)
         return 2
