@@ -108,9 +108,10 @@ unavailable or mismatched hash blocks completion, and equality cannot be
 self-reported. Inline completion also requires observable same-task
 continuation and actual result, artifact, or test evidence that the approved
 prompt's success criteria are satisfied;
-continuation start alone is not completion. This behavior is a skill contract
-and does not claim that the Codex client exposes a foreground message-injection
-API.
+continuation start alone is not completion. This behavior is a skill contract,
+and any draft replacement or invalidation clears both hashes and all execution
+evidence before a new draft can be approved. It does not claim that the Codex
+client exposes a foreground message-injection API.
 
 WSL and historical Codex binaries remain unverified surfaces for `v0.1.2`.
 They use the capability policy: install may succeed, but workflows block if the

@@ -16,6 +16,8 @@ Versions use [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   bytes cannot be verified or the hashes differ.
 - Clear both prompt hashes whenever the draft or execution state is invalidated,
   and provide a raw-byte hash helper covered by tests.
+- Align the entry-point metadata and Windows capability guidance with the
+  current-conversation default.
 
 ## [0.1.2] - 2026-07-14
 

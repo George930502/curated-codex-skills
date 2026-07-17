@@ -93,6 +93,7 @@ INLINE_RULES = (
     "it reads `stdin.buffer` without normalization",
     "clears the audit, draft, `draft_sha256`, `executed_draft_sha256`, approval",
     "If the helper or an equivalent byte-hash capability is unavailable, set `state: blocked`",
+    "Whenever the draft is replaced or invalidated for any reason, clear `draft`, `draft_sha256`, `executed_draft_sha256`, approval, and all execution evidence before creating or approving a new draft",
 )
 BACKGROUND_RULES = (
     "Use this section only after the user explicitly requested and approved",
@@ -120,7 +121,7 @@ PROMPT_REVIEW_CONTRADICTIONS = (
 )
 CRITICAL_CONTRACT_HASHES = {
     "native-input": "791c0ca5d91bfced24adc536a8f9cc6c2f7288363bfcca61a807a31e6a6978dc",
-    "approval": "97d76992fbc35f913e6af9a99d0f34a8c8d5cf9c486e68b80f92fdd734768ddf",
+    "approval": "735f81ef2827fb2bed7bc919d636f2498744a4ebb429157f0f3f05cdd4c65eb9",
 }
 
 

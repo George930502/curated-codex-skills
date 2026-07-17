@@ -161,6 +161,15 @@ class RepositoryTests(unittest.TestCase):
             hashlib.sha256(payload).hexdigest(), result.stdout.decode().strip()
         )
 
+    def test_prompt_review_invalidates_hashes_with_draft(self) -> None:
+        protocol = " ".join(self.read_approval_protocol().split())
+        self.assertIn(
+            "Whenever the draft is replaced or invalidated for any reason, clear "
+            "`draft`, `draft_sha256`, `executed_draft_sha256`, approval, and all "
+            "execution evidence before creating or approving a new draft",
+            protocol,
+        )
+
     def test_skill_catalog_matches_directories(self) -> None:
         readme = (ROOT / "README.md").read_text(encoding="utf-8")
         skills = sorted(path.name for path in (ROOT / "skills").iterdir() if path.is_dir())

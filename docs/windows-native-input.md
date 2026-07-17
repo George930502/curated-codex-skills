@@ -100,7 +100,8 @@ Codex. The installers detect and explain the missing prerequisite, but do not
 silently mutate a user's global Codex feature configuration. The explicit
 `codex features enable` command records that opt-in.
 
-Fixing this capability enables the clarification and approval gates. Final
-dispatch additionally requires the active Codex surface to expose its task
-lookup and message-send tools; the skill will remain blocked rather than claim
-success if those tools are unavailable.
+Fixing this capability enables the clarification and approval gates. Inline
+execution continues in the current task and does not require task lookup or
+message-send tools. Only an explicitly requested `background-task` dispatch
+requires the active Codex surface to expose those tools; the skill will remain
+blocked rather than claim success if they are unavailable.

@@ -39,6 +39,10 @@ stdin; it reads `stdin.buffer` without normalization. If the helper or an
 equivalent byte-hash capability is unavailable, set `state: blocked` rather
 than self-reporting a hash.
 
+Whenever the draft is replaced or invalidated for any reason, clear `draft`,
+`draft_sha256`, `executed_draft_sha256`, approval, and all execution evidence
+before creating or approving a new draft.
+
 After every grilling answer, update the applicable `purpose_brief` field before
 re-auditing. Polishing receives this complete record, not a prose summary.
 
