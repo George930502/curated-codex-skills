@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+import hashlib
 import importlib.util
 from pathlib import Path
+import subprocess
+import sys
 import unittest
 
 
@@ -15,6 +18,15 @@ SPEC.loader.exec_module(checks)
 
 
 class RepositoryTests(unittest.TestCase):
+    def read_approval_protocol(self) -> str:
+        return (
+            ROOT
+            / "skills"
+            / "prompt-review-and-dispatch"
+            / "references"
+            / "approval-protocol.md"
+        ).read_text(encoding="utf-8")
+
     def test_local_markdown_links_resolve(self) -> None:
         self.assertEqual([], checks.check_links())
 
@@ -57,13 +69,7 @@ class RepositoryTests(unittest.TestCase):
         self.assertNotEqual([], checks.native_input_text_errors(negated))
 
     def test_approval_protocol_requires_exact_english_approval(self) -> None:
-        protocol = (
-            ROOT
-            / "skills"
-            / "prompt-review-and-dispatch"
-            / "references"
-            / "approval-protocol.md"
-        ).read_text(encoding="utf-8")
+        protocol = self.read_approval_protocol()
         self.assertEqual([], checks.approval_protocol_errors(protocol))
         normalized = " ".join(protocol.split())
         for rule in checks.APPROVAL_RULES:
@@ -71,18 +77,113 @@ class RepositoryTests(unittest.TestCase):
                 changed = normalized.replace(rule, "removed", 1)
                 self.assertNotEqual([], checks.approval_protocol_errors(changed))
         contradictions = (
-            "Approve (Recommended) does not authorize dispatch.",
+            "Approve (Recommended) does not authorize current-conversation execution or background dispatch.",
             "Reject authorizes dispatch.",
             "Other may authorize dispatch.",
-            "Never rely on only Approve (Recommended) authorizes dispatch.",
-            "Only Approve (Recommended) authorizes dispatch, except when Reject is selected.",
-            "Approve (Recommended) is not required to authorize dispatch.",
+            "Never rely on only Approve (Recommended) authorizes current-conversation execution or background dispatch.",
+            "Only Approve (Recommended) authorizes current-conversation execution or background dispatch, except when Reject is selected.",
+            "Approve (Recommended) is not required to authorize current-conversation execution or background dispatch.",
             "Dispatch may proceed after Reject.",
         )
         for contradiction in contradictions:
             with self.subTest(contradiction=contradiction):
                 changed = protocol + "\n" + contradiction
                 self.assertNotEqual([], checks.approval_protocol_errors(changed))
+
+    def test_prompt_review_defaults_to_inline_execution(self) -> None:
+        skill = (
+            ROOT / "skills" / "prompt-review-and-dispatch" / "SKILL.md"
+        ).read_text(encoding="utf-8")
+        protocol = self.read_approval_protocol()
+        self.assertEqual([], checks.prompt_review_contract_errors(skill, protocol))
+
+        for rule in checks.SKILL_INLINE_RULES:
+            with self.subTest(rule=rule):
+                changed = " ".join(skill.split()).replace(rule, "removed", 1)
+                self.assertNotEqual(
+                    [], checks.prompt_review_contract_errors(changed, protocol)
+                )
+
+        for contradiction in checks.PROMPT_REVIEW_CONTRADICTIONS:
+            with self.subTest(contradiction=contradiction):
+                changed = skill + "\n" + contradiction
+                self.assertNotEqual(
+                    [], checks.prompt_review_contract_errors(changed, protocol)
+                )
+
+        generic_contradiction = (
+            "For current-conversation mode, call `send_message_to_thread` after approval."
+        )
+        self.assertNotEqual(
+            [],
+            checks.prompt_review_contract_errors(
+                skill + "\n" + generic_contradiction, protocol
+            ),
+        )
+
+        wait_contradiction = (
+            "For current-conversation mode, call `wait_threads` to observe progress."
+        )
+        self.assertNotEqual(
+            [],
+            checks.prompt_review_contract_errors(
+                skill + "\n" + wait_contradiction, protocol
+            ),
+        )
+
+    def test_compatibility_documents_both_execution_hash_gates(self) -> None:
+        compatibility = (ROOT / "docs" / "compatibility.md").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn(
+            "Both execution modes require exact-byte hash equality", compatibility
+        )
+        self.assertIn(
+            "the exact-byte hash comparison", " ".join(compatibility.split())
+        )
+
+    def test_prompt_hash_helper_preserves_input_bytes(self) -> None:
+        helper = (
+            ROOT
+            / "skills"
+            / "prompt-review-and-dispatch"
+            / "scripts"
+            / "hash_prompt.py"
+        )
+        payload = "Draft\nwithout normalization".encode("utf-8")
+        result = subprocess.run(
+            [sys.executable, str(helper)],
+            input=payload,
+            stdout=subprocess.PIPE,
+            check=True,
+        )
+        self.assertEqual(
+            hashlib.sha256(payload).hexdigest(), result.stdout.decode().strip()
+        )
+
+    def test_prompt_review_invalidates_hashes_with_draft(self) -> None:
+        protocol = " ".join(self.read_approval_protocol().split())
+        self.assertIn(
+            "Whenever the draft is replaced or invalidated for any reason, clear "
+            "`draft`, `draft_sha256`, `executed_draft_sha256`, approval, and all "
+            "execution evidence; reset approval to `pending` before creating or "
+            "approving a new draft",
+            protocol,
+        )
+        self.assertIn(
+            "reset approval to pending before returning that reason to grilling",
+            protocol,
+        )
+        self.assertIn(
+            "After any such invalidation, reset approval to `pending` before "
+            "creating or approving a new draft",
+            protocol,
+        )
+        self.assertIn(
+            "pipe the exact draft bytes through the installed "
+            "`scripts/hash_prompt.py` and store the result as `draft_sha256`",
+            protocol,
+        )
 
     def test_skill_catalog_matches_directories(self) -> None:
         readme = (ROOT / "README.md").read_text(encoding="utf-8")

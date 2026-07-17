@@ -13,7 +13,7 @@ and exercised through the platforms on which its behavior differs.
 
 | Skill | Purpose | Origin |
 |---|---|---|
-| `prompt-review-and-dispatch` | Clarify, polish, approve, and dispatch a prompt into a verified Codex task. | Original composition |
+| `prompt-review-and-dispatch` | Clarify, polish, approve, and continue a prompt in the current conversation by default; explicitly requested background tasks remain supported. | Original composition |
 | `prompt-master-gpt5` | Audit or produce a lean GPT-5.6 prompt. | Distilled from `nidhinjs/prompt-master` plus OpenAI guidance |
 | `grill-with-docs` | Stress-test plans while maintaining domain language and decisions. | Adapted from `mattpocock/skills` |
 | `grilling` | Resolve decisions one native Codex question at a time. | Adapted from `mattpocock/skills` |

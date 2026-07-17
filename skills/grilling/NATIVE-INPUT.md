@@ -45,7 +45,7 @@ the missing capability. A prose question is not a substitute.
 - Alignment: offer `Aligned (Recommended)` and `Needs revision`; `Other` is
   custom feedback.
 - Approval: offer `Approve (Recommended)` and `Reject`; only the first
-  authorizes dispatch.
+  authorizes current-conversation execution or background dispatch.
 - Rejection: offer two or three English reason categories; `Other` carries the
   user's exact reason.
 

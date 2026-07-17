@@ -61,17 +61,27 @@ contracts are validated on every candidate.
 Manual scenario: invoke `$prompt-review-and-dispatch` with an incomplete prompt
 in a Default-mode desktop task; select the native alignment choice; inspect the
 displayed exact draft; leave or return an empty approval answer and confirm no
-dispatch; resume the task; then select the native approval option and confirm
-one thread-send result.
+execution; resume the task; then select the native approval option and confirm
+the exact approved prompt continues visibly in the same task, with no new
+thread and no background-thread API call (`list_threads`, `read_thread`,
+`wait_threads`, `send_message_to_thread`, `create_thread`, `fork_thread`, or
+`handoff_thread`). At completion, confirm the approved and executed exact UTF-8
+draft hashes match and that the approved success criteria have result, artifact,
+or test evidence. Repeat with an explicitly chosen `background-task` and
+confirm the verified destination, one thread-send result, and the exact-byte
+hash comparison.
 
 On 2026-07-14, the active Codex desktop task on Linux reported
 `codex-cli 0.144.1` with `default_mode_request_user_input` enabled. The task
 displayed the English `Aligned (Recommended)` and `Approve (Recommended)`
 controls, accepted explicit clickable selections, preserved state after empty
-answers, and dispatched only after approval was selected. This is a
-reproducible manual report for that observed client and configuration, but it
-has no retained independent GUI artifact and is not an independently auditable
-or universal client/version claim.
+answers, and dispatched only after approval was selected on the pre-repair
+background path. This is a reproducible manual report for that observed client
+and configuration, but it has no retained independent GUI artifact and is not
+an independently auditable or universal client/version claim. It does not claim
+that the post-repair inline path has already been manually observed; the
+scenario above is the required post-repair client check, while repository CI
+and contract tests provide the retained automated evidence.
 The current contract makes every agent-authored native-control string English
 by default while normal assistant prose remains language-adaptive. The client
 controls the displayed label and localization of its built-in `Other` choice.
@@ -83,6 +93,30 @@ The clarification/grilling control was not separately recorded in this manual
 observation; its coverage is limited to the static contract and executable
 capability fixtures above.
 
+## Current-conversation execution contract
+
+The working-tree repair for `prompt-review-and-dispatch` defaults to
+`current-conversation` execution. After the native approval selection, the
+agent continues the exact approved prompt in the same running task; it does not
+call the background-only `send_message_to_thread` tool. A separate
+`background-task` mode remains opt-in and retains the verified destination and
+explicit approval gates. Both execution modes require exact-byte hash equality
+between the approved and executed UTF-8 draft bytes. Before approval, the
+protocol computes `draft_sha256` from `draft.encode("utf-8")` without
+normalization and, before continuation or send, recomputes
+`executed_draft_sha256` from the exact bytes
+about to be executed or sent using the installed helper; an unavailable or
+mismatched hash blocks completion, and equality cannot be self-reported. Inline
+completion also requires observable same-task
+continuation and actual result, artifact, or test evidence that the approved
+prompt's success criteria are satisfied;
+continuation start alone is not completion. This behavior is a skill contract,
+and any draft replacement or invalidation clears both hashes and all execution
+evidence before a new draft can be approved. It does not claim that the Codex
+client exposes a foreground message-injection API.
+
 WSL and historical Codex binaries remain unverified surfaces for `v0.1.2`.
 They use the capability policy: install may succeed, but workflows block if the
-active client does not expose native input or task dispatch.
+active client does not expose native input. Only an explicitly requested
+`background-task` additionally blocks when task lookup or message-send tools
+are unavailable; current-conversation execution does not require them.

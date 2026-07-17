@@ -1,7 +1,7 @@
 interface:
   display_name: "Prompt Review and Dispatch"
-  short_description: "Review, align, approve, and dispatch prompts"
-  default_prompt: "Use $prompt-review-and-dispatch to clarify my purpose, polish a GPT-5.6 prompt, and wait for approval before sending it."
+  short_description: "Review, align, approve, and execute prompts"
+  default_prompt: "Use $prompt-review-and-dispatch to clarify my purpose, polish a GPT-5.6 prompt, require approval, and continue it in the current conversation by default; use background dispatch only when explicitly requested."
 
 policy:
   allow_implicit_invocation: false
