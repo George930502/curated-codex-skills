@@ -41,8 +41,8 @@ installed helper is unavailable, set `state: blocked` rather than using an
 equivalent capability or self-reporting a hash.
 
 Whenever the draft is replaced or invalidated for any reason, clear `draft`,
-`draft_sha256`, `executed_draft_sha256`, approval, and all execution evidence
-before creating or approving a new draft.
+`draft_sha256`, `executed_draft_sha256`, approval, and all execution evidence;
+reset approval to `pending` before creating or approving a new draft.
 
 After every grilling answer, update the applicable `purpose_brief` field before
 re-auditing. Polishing receives this complete record, not a prose summary.
@@ -63,8 +63,10 @@ guess an identity or substitute a manually supplied title or ID.
 
 ## Approval
 
-After displaying the full draft and selected execution mode, run the approval
-gate defined in the native-input contract. Approval authorizes only the
+After displaying the full draft and selected execution mode, pipe the exact
+draft bytes through the installed `scripts/hash_prompt.py` and store the result
+as `draft_sha256`; if the bytes cannot be exposed to the helper, set
+`state: blocked` and do not run the approval gate. Approval authorizes only the
 displayed bytes and selected mode; background mode also includes its verified
 destination. `awaiting-approval` remains a tool-backed native stage until an
 option is selected; it has no attempt counter and cannot return control to a
@@ -78,10 +80,9 @@ before returning that reason to grilling.
 
 ## Current-conversation execution
 
-After approval with `execution_mode: current-conversation`, pipe the exact
-approved `draft` bytes through the installed `scripts/hash_prompt.py` and store
-the result as `draft_sha256`. Immediately before treating `draft` as the next
-instruction, pipe the exact continuation bytes through the same helper and
+After approval with `execution_mode: current-conversation`, use the already
+computed `draft_sha256`. Immediately before treating `draft` as the next
+instruction, pipe the exact continuation bytes through the installed helper and
 store the result as `executed_draft_sha256`; if the bytes cannot be exposed to
 the helper or the hashes differ, set `state: blocked` and do not continue. Only
 then set `state: executing-inline` and treat `draft` as the next instruction
@@ -112,10 +113,11 @@ prompt: draft (unchanged)
 
 Before calling `send_message_to_thread`, pipe the exact `prompt: draft` bytes
 that will be sent through the installed `scripts/hash_prompt.py` and store the
-result as `executed_draft_sha256`. If the bytes cannot be exposed to the helper
-or the hashes differ, set `state: blocked` and do not send. Record the returned
-success as `dispatch_evidence`; verify that `executed_draft_sha256` equals
-`draft_sha256`. Both execution modes require this exact-byte comparison;
+result as `executed_draft_sha256`. If `draft_sha256` is unset, if the bytes
+cannot be exposed to the helper, or if the hashes differ, set `state: blocked`
+and do not send. Record the returned success as `dispatch_evidence`; verify
+that `executed_draft_sha256` equals `draft_sha256`. Both execution modes require
+this exact-byte comparison;
 background dispatch cannot complete without both the verified send evidence and
 the comparison.
 If the tool is unavailable,
