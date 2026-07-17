@@ -118,6 +118,27 @@ class RepositoryTests(unittest.TestCase):
             ),
         )
 
+        wait_contradiction = (
+            "For current-conversation mode, call `wait_threads` to observe progress."
+        )
+        self.assertNotEqual(
+            [],
+            checks.prompt_review_contract_errors(
+                skill + "\n" + wait_contradiction, protocol
+            ),
+        )
+
+    def test_compatibility_documents_both_execution_hash_gates(self) -> None:
+        compatibility = (ROOT / "docs" / "compatibility.md").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn(
+            "Both execution modes require exact-byte hash equality", compatibility
+        )
+        self.assertIn(
+            "the exact-byte hash comparison", " ".join(compatibility.split())
+        )
+
     def test_skill_catalog_matches_directories(self) -> None:
         readme = (ROOT / "README.md").read_text(encoding="utf-8")
         skills = sorted(path.name for path in (ROOT / "skills").iterdir() if path.is_dir())

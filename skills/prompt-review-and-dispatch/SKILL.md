@@ -25,7 +25,8 @@ Capture the rough prompt and GPT-5.6 target surface. Set
 another Codex task or thread.
 
 For `current-conversation`, label the destination as the current conversation;
-do not call `list_threads` or `read_thread`, and do not invent a destination ID.
+do not call `list_threads`, `read_thread`, or `wait_threads`, and do not invent a
+destination ID.
 For `background-task`, resolve the destination with the host's thread-list/read
 capabilities and show its title and ID before approval.
 
@@ -67,9 +68,10 @@ evidence; a new draft requires a new approval.
 
 After approval in `current-conversation` mode, treat the exact draft as the
 next instruction for this same running Codex task and execute it here. Keep
-progress in the current conversation; do not call `send_message_to_thread`,
-`create_thread`, `fork_thread`, or `handoff_thread`. Use the background dispatch
-section of the approval protocol only for an explicitly requested
+progress in the current conversation; do not call `list_threads`, `read_thread`,
+`wait_threads`, `send_message_to_thread`, `create_thread`, `fork_thread`, or
+`handoff_thread`. Use the background dispatch section of the approval protocol
+only for an explicitly requested
 `background-task`. Current-conversation execution is not dispatch and does not
 weaken the verified-dispatch gate: background dispatch still requires its
 verified send evidence. Inline completion requires verified evidence of the
@@ -80,4 +82,4 @@ evidence showing `executed_draft_sha256` equals `draft_sha256`, the approved
 prompt's success criteria have actual result/artifact/test evidence, and
 execution is complete;
 or the explicitly requested background dispatch reaches `complete` with
-verified send evidence.
+verified send evidence and exact-byte hash equality.

@@ -10,6 +10,8 @@ Versions use [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Make `prompt-review-and-dispatch` continue approved work in the current
   conversation by default instead of routing it through a background thread.
   Background dispatch remains available only when explicitly requested.
+- Require exact-byte identity for both execution modes and prohibit all thread
+  lookup, waiting, and dispatch APIs during current-conversation execution.
 
 ## [0.1.2] - 2026-07-14
 

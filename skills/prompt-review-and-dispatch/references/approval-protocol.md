@@ -34,8 +34,9 @@ re-auditing. Polishing receives this complete record, not a prose summary.
 ## Destination identity
 
 For `current-conversation`, use the current task as the destination, label it
-`current conversation`, and do not call `list_threads` or `read_thread`. No
-destination ID is required because no second task is being selected.
+`current conversation`, and do not call `list_threads`, `read_thread`, or
+`wait_threads`. No destination ID is required because no second task is being
+selected.
 
 For `background-task`, use `list_threads` to find the active Codex task and
 `read_thread` when needed to match the current request. Store its thread ID,
@@ -64,10 +65,11 @@ After approval with `execution_mode: current-conversation`, set
 `state: executing-inline` and treat `draft` as the next instruction for this
 same running Codex task. Execute it as a direct continuation and report
 progress in the current conversation. This is not a second synthetic user
-message. Do not call `send_message_to_thread`, `create_thread`, `fork_thread`,
-or `handoff_thread`; those are background or thread-management operations. Do
-not fabricate a send result. Current-conversation execution is not dispatch and
-does not replace or weaken the verified background-dispatch gate. Record the
+message; do not call `list_threads`, `read_thread`, `wait_threads`,
+`send_message_to_thread`, `create_thread`, `fork_thread`, or `handoff_thread`;
+those are background or thread-management operations. Do not fabricate a send
+result. Current-conversation execution is not dispatch and does not replace or
+weaken the verified background-dispatch gate. Record the
 verified same-task continuation in `verified_execution_evidence`, then set
 `state: complete` only when `executed_draft_sha256` equals `draft_sha256` and
 the approved prompt's success criteria have actual result, artifact, or test
@@ -87,8 +89,9 @@ prompt: draft (unchanged)
 ```
 
 Record the returned success as `dispatch_evidence`; verify that
-`executed_draft_sha256` equals `draft_sha256`. Background dispatch cannot
-complete without both the verified send evidence and the exact-byte comparison.
+`executed_draft_sha256` equals `draft_sha256`. Both execution modes require this
+exact-byte comparison; background dispatch cannot complete without both the
+verified send evidence and the comparison.
 If the tool is unavailable,
 identity is ambiguous, or the send fails, set `state: blocked`; retain the
 approved draft and retry the same dispatch when the capability returns. Manual

@@ -68,15 +68,18 @@ APPROVAL_RULES = (
     "execution or dispatch",
     "prompt: draft (unchanged)",
 )
-NO_THREAD_LOOKUP_RULE = "do not call `list_threads` or `read_thread`"
+NO_THREAD_LOOKUP_RULE = "do not call `list_threads`, `read_thread`, or `wait_threads`"
 SAME_TASK_RULE = "same running Codex task"
-NO_INLINE_SEND_RULE = "do not call `send_message_to_thread`"
+NO_INLINE_THREAD_RULE = (
+    "do not call `list_threads`, `read_thread`, `wait_threads`, "
+    "`send_message_to_thread`, `create_thread`, `fork_thread`, or `handoff_thread`"
+)
 INLINE_RULES = (
     "For `current-conversation`, use the current task as the destination",
     NO_THREAD_LOOKUP_RULE,
     SAME_TASK_RULE,
     "This is not a second synthetic user message",
-    "Do not call `send_message_to_thread`, `create_thread`, `fork_thread`,",
+    NO_INLINE_THREAD_RULE,
     "verified same-task continuation",
     "does not replace or weaken the verified background-dispatch gate",
     "approved prompt's success criteria have actual result, artifact, or test evidence",
@@ -87,13 +90,13 @@ BACKGROUND_RULES = (
     "Use this section only after the user explicitly requested and approved",
     "`execution_mode: background-task`",
     "Call `send_message_to_thread` once",
-    "cannot complete without both the verified send evidence and the exact-byte comparison",
+    "background dispatch cannot complete without both the verified send evidence and the comparison",
 )
 SKILL_INLINE_RULES = (
     "Default to `current-conversation` execution",
     "Use `background-task` only when the user explicitly asks for another Codex task or",
     NO_THREAD_LOOKUP_RULE,
-    NO_INLINE_SEND_RULE + ",",
+    NO_INLINE_THREAD_RULE,
     SAME_TASK_RULE,
     "does not weaken the verified-dispatch gate",
     "verified evidence of the same-task continuation",
@@ -103,12 +106,13 @@ PROMPT_REVIEW_CONTRADICTIONS = (
     "For current-conversation, call `send_message_to_thread`",
     "For `current-conversation`, call `send_message_to_thread`",
     "current-conversation mode may call `send_message_to_thread`",
+    "current-conversation mode may call `wait_threads`",
     "current-conversation execution may complete without verified",
     "Set `state: complete` merely when continuation begins",
 )
 CRITICAL_CONTRACT_HASHES = {
     "native-input": "791c0ca5d91bfced24adc536a8f9cc6c2f7288363bfcca61a807a31e6a6978dc",
-    "approval": "5183818f50b188a13114f4a732cad274c242230ad97e5ccf73a99baec007648e",
+    "approval": "607a49212541246629b2a64a85562bfb3437784791f823a77dcd55c06ade5761",
 }
 
 
@@ -249,14 +253,23 @@ def prompt_review_contract_errors(skill: str, protocol: str) -> list[str]:
         for rule in PROMPT_REVIEW_CONTRADICTIONS
         if rule in normalized_skill or rule in normalized_protocol
     )
+    background_tools = (
+        "list_threads",
+        "read_thread",
+        "wait_threads",
+        "send_message_to_thread",
+        "create_thread",
+        "fork_thread",
+        "handoff_thread",
+    )
     for sentence in re.split(r"(?<=[.!?])\s+", normalized_contract):
         if (
             "current-conversation" in sentence
-            and "send_message_to_thread" in sentence
+            and any(f"`{tool}`" in sentence for tool in background_tools)
             and not re.search(r"\b(?:do not|does not|never)\s+(?:call|use)\b", sentence)
         ):
             errors.append(
-                "contains a current-conversation sentence that permits background send"
+                "contains a current-conversation sentence that permits background thread operation"
             )
             break
     return errors
