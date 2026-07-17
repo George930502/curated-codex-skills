@@ -12,6 +12,8 @@ Versions use [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   Background dispatch remains available only when explicitly requested.
 - Require exact-byte identity for both execution modes and prohibit all thread
   lookup, waiting, and dispatch APIs during current-conversation execution.
+- Recompute the exact UTF-8 hashes before execution or send and block when the
+  bytes cannot be verified or the hashes differ.
 
 ## [0.1.2] - 2026-07-14
 

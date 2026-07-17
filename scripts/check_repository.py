@@ -85,6 +85,10 @@ INLINE_RULES = (
     "approved prompt's success criteria have actual result, artifact, or test evidence",
     "Do not set `state: complete` merely when continuation begins",
     "`executed_draft_sha256` equals `draft_sha256`",
+    "Compute `draft_sha256` as SHA-256 of `draft.encode(\"utf-8\")` without normalization",
+    "compute `executed_draft_sha256` from the exact UTF-8 bytes about to be executed or sent",
+    "If either hash cannot be computed from exact bytes or the hashes differ, set `state: blocked`",
+    "never self-report equality",
 )
 BACKGROUND_RULES = (
     "Use this section only after the user explicitly requested and approved",
@@ -112,7 +116,7 @@ PROMPT_REVIEW_CONTRADICTIONS = (
 )
 CRITICAL_CONTRACT_HASHES = {
     "native-input": "791c0ca5d91bfced24adc536a8f9cc6c2f7288363bfcca61a807a31e6a6978dc",
-    "approval": "607a49212541246629b2a64a85562bfb3437784791f823a77dcd55c06ade5761",
+    "approval": "2f0a57c133cc7f774ac80e4473037a93bff1204f0b50bbd9765014ef5c61f88e",
 }
 
 

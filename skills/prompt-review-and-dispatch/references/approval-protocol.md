@@ -21,12 +21,19 @@ executed_draft_sha256: [SHA-256 of the exact UTF-8 bytes executed or sent]
 pending_question: [native stage and exact question]
 approval: pending | approved | rejected
 rejection_reason: [verbatim answer]
-verified_execution_evidence: [draft_sha256 equals executed_draft_sha256; same-task continuation; approved prompt success-criteria evidence]
-dispatch_evidence: [send result]
+verified_inline_execution_evidence: [draft_sha256 equals executed_draft_sha256; same-task continuation; approved prompt success-criteria evidence]
+dispatch_evidence: [send result; draft_sha256 equals executed_draft_sha256]
 ```
 
 A change to source, target, execution mode, destination, or purpose clears the
-audit, draft, approval, verified execution evidence, and dispatch evidence.
+audit, draft, approval, verified inline execution evidence, and dispatch
+evidence.
+
+Compute `draft_sha256` as SHA-256 of `draft.encode("utf-8")` without
+normalization. Before execution or send, compute `executed_draft_sha256` from
+the exact UTF-8 bytes about to be executed or sent. If either hash cannot be
+computed from exact bytes or the hashes differ, set `state: blocked`; never
+self-report equality.
 
 After every grilling answer, update the applicable `purpose_brief` field before
 re-auditing. Polishing receives this complete record, not a prose summary.
@@ -70,7 +77,7 @@ message; do not call `list_threads`, `read_thread`, `wait_threads`,
 those are background or thread-management operations. Do not fabricate a send
 result. Current-conversation execution is not dispatch and does not replace or
 weaken the verified background-dispatch gate. Record the
-verified same-task continuation in `verified_execution_evidence`, then set
+verified same-task continuation in `verified_inline_execution_evidence`, then set
 `state: complete` only when `executed_draft_sha256` equals `draft_sha256` and
 the approved prompt's success criteria have actual result, artifact, or test
 evidence. Do not set `state: complete` merely when continuation begins; if the
