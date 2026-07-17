@@ -115,4 +115,6 @@ client exposes a foreground message-injection API.
 
 WSL and historical Codex binaries remain unverified surfaces for `v0.1.2`.
 They use the capability policy: install may succeed, but workflows block if the
-active client does not expose native input or task dispatch.
+active client does not expose native input. Only an explicitly requested
+`background-task` additionally blocks when task lookup or message-send tools
+are unavailable; current-conversation execution does not require them.
