@@ -64,6 +64,9 @@ local edits or require Python, signatures, or a generated hash manifest.
 - The prompt-review contract checker also rejects known contradictory
   current-conversation rules; positive phrase presence alone is not sufficient
   evidence that the execution-mode contract is intact.
+- The prompt-review hash helper reads raw stdin bytes without normalization and
+  is covered by the repository unit tests; unavailable hash capability must
+  block execution rather than accept self-reported equality.
 
 ## Primary sources
 

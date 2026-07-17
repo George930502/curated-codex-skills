@@ -26,14 +26,18 @@ dispatch_evidence: [send result; draft_sha256 equals executed_draft_sha256]
 ```
 
 A change to source, target, execution mode, destination, or purpose clears the
-audit, draft, approval, verified inline execution evidence, and dispatch
-evidence.
+audit, draft, `draft_sha256`, `executed_draft_sha256`, approval, verified inline
+execution evidence, and dispatch evidence.
 
 Compute `draft_sha256` as SHA-256 of `draft.encode("utf-8")` without
 normalization. Before execution or send, compute `executed_draft_sha256` from
 the exact UTF-8 bytes about to be executed or sent. If either hash cannot be
 computed from exact bytes or the hashes differ, set `state: blocked`; never
 self-report equality.
+Use `scripts/hash_prompt.py` from this skill directory with the exact bytes on
+stdin; it reads `stdin.buffer` without normalization. If the helper or an
+equivalent byte-hash capability is unavailable, set `state: blocked` rather
+than self-reporting a hash.
 
 After every grilling answer, update the applicable `purpose_brief` field before
 re-auditing. Polishing receives this complete record, not a prose summary.
@@ -63,8 +67,9 @@ prose-input prompt. Only `Approve (Recommended)` authorizes current-conversation
 execution or background dispatch. On `Reject`, run the native rejection gate
 and store its selected category or `Other` text verbatim in `rejection_reason`.
 Approval-gate `Other` is already the verbatim reason and does not authorize
-execution or dispatch. Then clear the rejected draft and return that reason to
-grilling.
+execution or dispatch. Then clear the rejected draft, `draft_sha256`,
+`executed_draft_sha256`, and all execution evidence before returning that reason
+to grilling.
 
 ## Current-conversation execution
 

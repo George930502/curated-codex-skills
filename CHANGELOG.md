@@ -14,6 +14,8 @@ Versions use [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   lookup, waiting, and dispatch APIs during current-conversation execution.
 - Recompute the exact UTF-8 hashes before execution or send and block when the
   bytes cannot be verified or the hashes differ.
+- Clear both prompt hashes whenever the draft or execution state is invalidated,
+  and provide a raw-byte hash helper covered by tests.
 
 ## [0.1.2] - 2026-07-14
 

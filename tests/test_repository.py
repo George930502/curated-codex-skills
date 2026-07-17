@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+import hashlib
 import importlib.util
 from pathlib import Path
+import subprocess
+import sys
 import unittest
 
 
@@ -137,6 +140,25 @@ class RepositoryTests(unittest.TestCase):
         )
         self.assertIn(
             "the exact-byte hash comparison", " ".join(compatibility.split())
+        )
+
+    def test_prompt_hash_helper_preserves_input_bytes(self) -> None:
+        helper = (
+            ROOT
+            / "skills"
+            / "prompt-review-and-dispatch"
+            / "scripts"
+            / "hash_prompt.py"
+        )
+        payload = "Draft\nwithout normalization".encode("utf-8")
+        result = subprocess.run(
+            [sys.executable, str(helper)],
+            input=payload,
+            stdout=subprocess.PIPE,
+            check=True,
+        )
+        self.assertEqual(
+            hashlib.sha256(payload).hexdigest(), result.stdout.decode().strip()
         )
 
     def test_skill_catalog_matches_directories(self) -> None:

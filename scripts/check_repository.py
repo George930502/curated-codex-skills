@@ -89,6 +89,10 @@ INLINE_RULES = (
     "compute `executed_draft_sha256` from the exact UTF-8 bytes about to be executed or sent",
     "If either hash cannot be computed from exact bytes or the hashes differ, set `state: blocked`",
     "never self-report equality",
+    "Use `scripts/hash_prompt.py` from this skill directory with the exact bytes on stdin",
+    "it reads `stdin.buffer` without normalization",
+    "clears the audit, draft, `draft_sha256`, `executed_draft_sha256`, approval",
+    "If the helper or an equivalent byte-hash capability is unavailable, set `state: blocked`",
 )
 BACKGROUND_RULES = (
     "Use this section only after the user explicitly requested and approved",
@@ -116,7 +120,7 @@ PROMPT_REVIEW_CONTRADICTIONS = (
 )
 CRITICAL_CONTRACT_HASHES = {
     "native-input": "791c0ca5d91bfced24adc536a8f9cc6c2f7288363bfcca61a807a31e6a6978dc",
-    "approval": "2f0a57c133cc7f774ac80e4473037a93bff1204f0b50bbd9765014ef5c61f88e",
+    "approval": "97d76992fbc35f913e6af9a99d0f34a8c8d5cf9c486e68b80f92fdd734768ddf",
 }
 
 
