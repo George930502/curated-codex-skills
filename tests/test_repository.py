@@ -169,6 +169,10 @@ class RepositoryTests(unittest.TestCase):
             "execution evidence before creating or approving a new draft",
             protocol,
         )
+        self.assertIn(
+            "reset approval to pending before returning that reason to grilling",
+            protocol,
+        )
 
     def test_skill_catalog_matches_directories(self) -> None:
         readme = (ROOT / "README.md").read_text(encoding="utf-8")

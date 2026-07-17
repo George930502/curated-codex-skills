@@ -72,8 +72,8 @@ execution or background dispatch. On `Reject`, run the native rejection gate
 and store its selected category or `Other` text verbatim in `rejection_reason`.
 Approval-gate `Other` is already the verbatim reason and does not authorize
 execution or dispatch. Then clear the rejected draft, `draft_sha256`,
-`executed_draft_sha256`, and all execution evidence before returning that reason
-to grilling.
+`executed_draft_sha256`, and all execution evidence; reset approval to pending
+before returning that reason to grilling.
 
 ## Current-conversation execution
 
