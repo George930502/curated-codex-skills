@@ -15,6 +15,15 @@ SPEC.loader.exec_module(checks)
 
 
 class RepositoryTests(unittest.TestCase):
+    def read_approval_protocol(self) -> str:
+        return (
+            ROOT
+            / "skills"
+            / "prompt-review-and-dispatch"
+            / "references"
+            / "approval-protocol.md"
+        ).read_text(encoding="utf-8")
+
     def test_local_markdown_links_resolve(self) -> None:
         self.assertEqual([], checks.check_links())
 
@@ -57,13 +66,7 @@ class RepositoryTests(unittest.TestCase):
         self.assertNotEqual([], checks.native_input_text_errors(negated))
 
     def test_approval_protocol_requires_exact_english_approval(self) -> None:
-        protocol = (
-            ROOT
-            / "skills"
-            / "prompt-review-and-dispatch"
-            / "references"
-            / "approval-protocol.md"
-        ).read_text(encoding="utf-8")
+        protocol = self.read_approval_protocol()
         self.assertEqual([], checks.approval_protocol_errors(protocol))
         normalized = " ".join(protocol.split())
         for rule in checks.APPROVAL_RULES:
@@ -71,18 +74,49 @@ class RepositoryTests(unittest.TestCase):
                 changed = normalized.replace(rule, "removed", 1)
                 self.assertNotEqual([], checks.approval_protocol_errors(changed))
         contradictions = (
-            "Approve (Recommended) does not authorize dispatch.",
+            "Approve (Recommended) does not authorize current-conversation execution or background dispatch.",
             "Reject authorizes dispatch.",
             "Other may authorize dispatch.",
-            "Never rely on only Approve (Recommended) authorizes dispatch.",
-            "Only Approve (Recommended) authorizes dispatch, except when Reject is selected.",
-            "Approve (Recommended) is not required to authorize dispatch.",
+            "Never rely on only Approve (Recommended) authorizes current-conversation execution or background dispatch.",
+            "Only Approve (Recommended) authorizes current-conversation execution or background dispatch, except when Reject is selected.",
+            "Approve (Recommended) is not required to authorize current-conversation execution or background dispatch.",
             "Dispatch may proceed after Reject.",
         )
         for contradiction in contradictions:
             with self.subTest(contradiction=contradiction):
                 changed = protocol + "\n" + contradiction
                 self.assertNotEqual([], checks.approval_protocol_errors(changed))
+
+    def test_prompt_review_defaults_to_inline_execution(self) -> None:
+        skill = (
+            ROOT / "skills" / "prompt-review-and-dispatch" / "SKILL.md"
+        ).read_text(encoding="utf-8")
+        protocol = self.read_approval_protocol()
+        self.assertEqual([], checks.prompt_review_contract_errors(skill, protocol))
+
+        for rule in checks.SKILL_INLINE_RULES:
+            with self.subTest(rule=rule):
+                changed = " ".join(skill.split()).replace(rule, "removed", 1)
+                self.assertNotEqual(
+                    [], checks.prompt_review_contract_errors(changed, protocol)
+                )
+
+        for contradiction in checks.PROMPT_REVIEW_CONTRADICTIONS:
+            with self.subTest(contradiction=contradiction):
+                changed = skill + "\n" + contradiction
+                self.assertNotEqual(
+                    [], checks.prompt_review_contract_errors(changed, protocol)
+                )
+
+        generic_contradiction = (
+            "For current-conversation mode, call `send_message_to_thread` after approval."
+        )
+        self.assertNotEqual(
+            [],
+            checks.prompt_review_contract_errors(
+                skill + "\n" + generic_contradiction, protocol
+            ),
+        )
 
     def test_skill_catalog_matches_directories(self) -> None:
         readme = (ROOT / "README.md").read_text(encoding="utf-8")

@@ -62,15 +62,53 @@ FORMER_NATIVE_LABELS = (
     "`\u540c\u610f`",
 )
 APPROVAL_RULES = (
-    "Only `Approve (Recommended)` authorizes dispatch",
+    "Only `Approve (Recommended)` authorizes current-conversation execution or background dispatch",
     "On `Reject`, run the native rejection gate",
     "Approval-gate `Other` is already the verbatim reason and does not authorize "
-    "dispatch",
+    "execution or dispatch",
     "prompt: draft (unchanged)",
 )
+NO_THREAD_LOOKUP_RULE = "do not call `list_threads` or `read_thread`"
+SAME_TASK_RULE = "same running Codex task"
+NO_INLINE_SEND_RULE = "do not call `send_message_to_thread`"
+INLINE_RULES = (
+    "For `current-conversation`, use the current task as the destination",
+    NO_THREAD_LOOKUP_RULE,
+    SAME_TASK_RULE,
+    "This is not a second synthetic user message",
+    "Do not call `send_message_to_thread`, `create_thread`, `fork_thread`,",
+    "verified same-task continuation",
+    "does not replace or weaken the verified background-dispatch gate",
+    "approved prompt's success criteria have actual result, artifact, or test evidence",
+    "Do not set `state: complete` merely when continuation begins",
+    "`executed_draft_sha256` equals `draft_sha256`",
+)
+BACKGROUND_RULES = (
+    "Use this section only after the user explicitly requested and approved",
+    "`execution_mode: background-task`",
+    "Call `send_message_to_thread` once",
+    "cannot complete without both the verified send evidence and the exact-byte comparison",
+)
+SKILL_INLINE_RULES = (
+    "Default to `current-conversation` execution",
+    "Use `background-task` only when the user explicitly asks for another Codex task or",
+    NO_THREAD_LOOKUP_RULE,
+    NO_INLINE_SEND_RULE + ",",
+    SAME_TASK_RULE,
+    "does not weaken the verified-dispatch gate",
+    "verified evidence of the same-task continuation",
+    "Inline completion requires verified evidence of the same-task continuation and the approved prompt's success criteria",
+)
+PROMPT_REVIEW_CONTRADICTIONS = (
+    "For current-conversation, call `send_message_to_thread`",
+    "For `current-conversation`, call `send_message_to_thread`",
+    "current-conversation mode may call `send_message_to_thread`",
+    "current-conversation execution may complete without verified",
+    "Set `state: complete` merely when continuation begins",
+)
 CRITICAL_CONTRACT_HASHES = {
-    "native-input": "51cc409d5cf799c339d189f2d90cc931a3c01b8a7682f61aac45b6d393c5fd97",
-    "approval": "deaf011795a5e2e124fabc85f034a1c152235767cdfd95d001adc1ba95ab8225",
+    "native-input": "791c0ca5d91bfced24adc536a8f9cc6c2f7288363bfcca61a807a31e6a6978dc",
+    "approval": "5183818f50b188a13114f4a732cad274c242230ad97e5ccf73a99baec007648e",
 }
 
 
@@ -187,6 +225,43 @@ def approval_protocol_errors(protocol: str) -> list[str]:
     return errors
 
 
+def prompt_review_contract_errors(skill: str, protocol: str) -> list[str]:
+    normalized_skill = " ".join(skill.split())
+    normalized_protocol = " ".join(protocol.split())
+    normalized_contract = f"{normalized_skill} {normalized_protocol}"
+    errors = [
+        f"missing required current-conversation rule {rule!r}"
+        for rule in SKILL_INLINE_RULES
+        if rule not in normalized_skill
+    ]
+    errors.extend(
+        f"missing required inline-execution rule {rule!r}"
+        for rule in INLINE_RULES
+        if rule not in normalized_protocol
+    )
+    errors.extend(
+        f"missing required background-dispatch rule {rule!r}"
+        for rule in BACKGROUND_RULES
+        if rule not in normalized_protocol
+    )
+    errors.extend(
+        f"contains contradictory current-conversation rule {rule!r}"
+        for rule in PROMPT_REVIEW_CONTRADICTIONS
+        if rule in normalized_skill or rule in normalized_protocol
+    )
+    for sentence in re.split(r"(?<=[.!?])\s+", normalized_contract):
+        if (
+            "current-conversation" in sentence
+            and "send_message_to_thread" in sentence
+            and not re.search(r"\b(?:do not|does not|never)\s+(?:call|use)\b", sentence)
+        ):
+            errors.append(
+                "contains a current-conversation sentence that permits background send"
+            )
+            break
+    return errors
+
+
 def check_native_input_contract() -> list[str]:
     contract_path = ROOT / "skills" / "grilling" / "NATIVE-INPUT.md"
     if not contract_path.is_file():
@@ -231,9 +306,16 @@ def check_native_input_contract() -> list[str]:
             f"{consumers[-1]}: {error}"
             for error in approval_protocol_errors(approval)
         )
+        normalized_approval = " ".join(approval.split())
         for rule in ("list_threads", "read_thread", "state: blocked", "Do not guess an identity"):
-            if rule not in approval:
+            if rule not in normalized_approval:
                 errors.append(f"{consumers[-1]}: missing destination-identity rule {rule!r}")
+        skill_path = ROOT / "skills" / "prompt-review-and-dispatch" / "SKILL.md"
+        skill = skill_path.read_text(encoding="utf-8") if skill_path.is_file() else ""
+        errors.extend(
+            f"prompt-review-and-dispatch: {error}"
+            for error in prompt_review_contract_errors(skill, approval)
+        )
     return errors
 
 

@@ -57,6 +57,13 @@ local edits or require Python, signatures, or a generated hash manifest.
   by the repository checker. Any wording change, including a contradictory
   exception that leaves canonical sentences intact, requires an explicit pin
   update in the same reviewed diff.
+- The repository checker intentionally repeats a small set of safety-critical
+  contract phrases from the human-readable skills. This duplication is
+  fail-closed enforcement against contract drift, not a runtime abstraction
+  target; keep the checker literals synchronized with the pinned contracts.
+- The prompt-review contract checker also rejects known contradictory
+  current-conversation rules; positive phrase presence alone is not sufficient
+  evidence that the execution-mode contract is intact.
 
 ## Primary sources
 

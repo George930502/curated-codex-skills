@@ -61,17 +61,20 @@ contracts are validated on every candidate.
 Manual scenario: invoke `$prompt-review-and-dispatch` with an incomplete prompt
 in a Default-mode desktop task; select the native alignment choice; inspect the
 displayed exact draft; leave or return an empty approval answer and confirm no
-dispatch; resume the task; then select the native approval option and confirm
-one thread-send result.
+execution; resume the task; then select the native approval option and confirm
+the exact approved prompt continues visibly in the same task, with no new
+thread and no `send_message_to_thread` call. Repeat with an explicitly chosen
+`background-task` and confirm the verified destination and one thread-send
+result.
 
 On 2026-07-14, the active Codex desktop task on Linux reported
 `codex-cli 0.144.1` with `default_mode_request_user_input` enabled. The task
 displayed the English `Aligned (Recommended)` and `Approve (Recommended)`
 controls, accepted explicit clickable selections, preserved state after empty
-answers, and dispatched only after approval was selected. This is a
-reproducible manual report for that observed client and configuration, but it
-has no retained independent GUI artifact and is not an independently auditable
-or universal client/version claim.
+answers, and dispatched only after approval was selected on the pre-repair
+background path. This is a reproducible manual report for that observed client
+and configuration, but it has no retained independent GUI artifact and is not
+an independently auditable or universal client/version claim.
 The current contract makes every agent-authored native-control string English
 by default while normal assistant prose remains language-adaptive. The client
 controls the displayed label and localization of its built-in `Other` choice.
@@ -82,6 +85,21 @@ retains its native UI.
 The clarification/grilling control was not separately recorded in this manual
 observation; its coverage is limited to the static contract and executable
 capability fixtures above.
+
+## Current-conversation execution contract
+
+The working-tree repair for `prompt-review-and-dispatch` defaults to
+`current-conversation` execution. After the native approval selection, the
+agent continues the exact approved prompt in the same running task; it does not
+call the background-only `send_message_to_thread` tool. A separate
+`background-task` mode remains opt-in and retains the verified destination and
+explicit approval gates. Inline completion requires the exact draft to remain
+unchanged as verified by matching SHA-256 hashes for the approved and executed
+UTF-8 bytes, observable same-task continuation, and actual result, artifact, or
+test evidence that the approved prompt's success criteria are satisfied;
+continuation start alone is not completion. This behavior is a skill contract
+and does not claim that the Codex client exposes a foreground message-injection
+API.
 
 WSL and historical Codex binaries remain unverified surfaces for `v0.1.2`.
 They use the capability policy: install may succeed, but workflows block if the
