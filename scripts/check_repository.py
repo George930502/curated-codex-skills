@@ -94,7 +94,9 @@ INLINE_RULES = (
     "clears the audit, draft, `draft_sha256`, `executed_draft_sha256`, approval",
     "After any such invalidation, reset approval to `pending` before creating or approving a new draft",
     "If the installed helper is unavailable, set `state: blocked` rather than using an equivalent capability or self-reporting a hash",
-    "Whenever the draft is replaced or invalidated for any reason, clear `draft`, `draft_sha256`, `executed_draft_sha256`, approval, and all execution evidence before creating or approving a new draft",
+    "Whenever the draft is replaced or invalidated for any reason, clear `draft`, `draft_sha256`, `executed_draft_sha256`, approval, and all execution evidence; reset approval to `pending` before creating or approving a new draft",
+    "pipe the exact draft bytes through the installed `scripts/hash_prompt.py` and store the result as `draft_sha256`",
+    "If `draft_sha256` is unset",
     "reset approval to pending before returning that reason to grilling",
 )
 BACKGROUND_RULES = (
@@ -123,7 +125,7 @@ PROMPT_REVIEW_CONTRADICTIONS = (
 )
 CRITICAL_CONTRACT_HASHES = {
     "native-input": "791c0ca5d91bfced24adc536a8f9cc6c2f7288363bfcca61a807a31e6a6978dc",
-    "approval": "9afab963c673cab472442c9dc10370cdd7a02563ff8003036316064e1c113b8b",
+    "approval": "72d1efaf5ab7dda5c08fed88747afd7db6fa7312500cb88a634f27740a630cc2",
 }
 
 

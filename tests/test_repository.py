@@ -166,7 +166,8 @@ class RepositoryTests(unittest.TestCase):
         self.assertIn(
             "Whenever the draft is replaced or invalidated for any reason, clear "
             "`draft`, `draft_sha256`, `executed_draft_sha256`, approval, and all "
-            "execution evidence before creating or approving a new draft",
+            "execution evidence; reset approval to `pending` before creating or "
+            "approving a new draft",
             protocol,
         )
         self.assertIn(
@@ -176,6 +177,11 @@ class RepositoryTests(unittest.TestCase):
         self.assertIn(
             "After any such invalidation, reset approval to `pending` before "
             "creating or approving a new draft",
+            protocol,
+        )
+        self.assertIn(
+            "pipe the exact draft bytes through the installed "
+            "`scripts/hash_prompt.py` and store the result as `draft_sha256`",
             protocol,
         )
 
