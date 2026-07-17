@@ -173,6 +173,11 @@ class RepositoryTests(unittest.TestCase):
             "reset approval to pending before returning that reason to grilling",
             protocol,
         )
+        self.assertIn(
+            "After any such invalidation, reset approval to `pending` before "
+            "creating or approving a new draft",
+            protocol,
+        )
 
     def test_skill_catalog_matches_directories(self) -> None:
         readme = (ROOT / "README.md").read_text(encoding="utf-8")

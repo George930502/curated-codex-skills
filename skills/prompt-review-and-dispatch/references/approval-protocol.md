@@ -27,17 +27,18 @@ dispatch_evidence: [send result; draft_sha256 equals executed_draft_sha256]
 
 A change to source, target, execution mode, destination, or purpose clears the
 audit, draft, `draft_sha256`, `executed_draft_sha256`, approval, verified inline
-execution evidence, and dispatch evidence.
+execution evidence, and dispatch evidence. After any such invalidation, reset
+approval to `pending` before creating or approving a new draft.
 
 Compute `draft_sha256` as SHA-256 of `draft.encode("utf-8")` without
 normalization. Before execution or send, compute `executed_draft_sha256` from
 the exact UTF-8 bytes about to be executed or sent. If either hash cannot be
 computed from exact bytes or the hashes differ, set `state: blocked`; never
 self-report equality.
-Use `scripts/hash_prompt.py` from this skill directory with the exact bytes on
-stdin; it reads `stdin.buffer` without normalization. If the helper or an
-equivalent byte-hash capability is unavailable, set `state: blocked` rather
-than self-reporting a hash.
+Use the installed `scripts/hash_prompt.py` from this skill directory with the
+exact bytes on stdin; it reads `stdin.buffer` without normalization. If the
+installed helper is unavailable, set `state: blocked` rather than using an
+equivalent capability or self-reporting a hash.
 
 Whenever the draft is replaced or invalidated for any reason, clear `draft`,
 `draft_sha256`, `executed_draft_sha256`, approval, and all execution evidence
@@ -77,9 +78,14 @@ before returning that reason to grilling.
 
 ## Current-conversation execution
 
-After approval with `execution_mode: current-conversation`, set
-`state: executing-inline` and treat `draft` as the next instruction for this
-same running Codex task. Execute it as a direct continuation and report
+After approval with `execution_mode: current-conversation`, pipe the exact
+approved `draft` bytes through the installed `scripts/hash_prompt.py` and store
+the result as `draft_sha256`. Immediately before treating `draft` as the next
+instruction, pipe the exact continuation bytes through the same helper and
+store the result as `executed_draft_sha256`; if the bytes cannot be exposed to
+the helper or the hashes differ, set `state: blocked` and do not continue. Only
+then set `state: executing-inline` and treat `draft` as the next instruction
+for this same running Codex task. Execute it as a direct continuation and report
 progress in the current conversation. This is not a second synthetic user
 message; do not call `list_threads`, `read_thread`, `wait_threads`,
 `send_message_to_thread`, `create_thread`, `fork_thread`, or `handoff_thread`;
@@ -104,10 +110,14 @@ hostId: destination_host_id (when present)
 prompt: draft (unchanged)
 ```
 
-Record the returned success as `dispatch_evidence`; verify that
-`executed_draft_sha256` equals `draft_sha256`. Both execution modes require this
-exact-byte comparison; background dispatch cannot complete without both the
-verified send evidence and the comparison.
+Before calling `send_message_to_thread`, pipe the exact `prompt: draft` bytes
+that will be sent through the installed `scripts/hash_prompt.py` and store the
+result as `executed_draft_sha256`. If the bytes cannot be exposed to the helper
+or the hashes differ, set `state: blocked` and do not send. Record the returned
+success as `dispatch_evidence`; verify that `executed_draft_sha256` equals
+`draft_sha256`. Both execution modes require this exact-byte comparison;
+background dispatch cannot complete without both the verified send evidence and
+the comparison.
 If the tool is unavailable,
 identity is ambiguous, or the send fails, set `state: blocked`; retain the
 approved draft and retry the same dispatch when the capability returns. Manual

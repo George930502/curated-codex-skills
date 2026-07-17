@@ -102,10 +102,11 @@ call the background-only `send_message_to_thread` tool. A separate
 `background-task` mode remains opt-in and retains the verified destination and
 explicit approval gates. Both execution modes require exact-byte hash equality
 between the approved and executed UTF-8 draft bytes. The protocol computes
-`draft_sha256` from `draft.encode("utf-8")` without normalization and recomputes
-`executed_draft_sha256` from the exact bytes about to be executed or sent; an
-unavailable or mismatched hash blocks completion, and equality cannot be
-self-reported. Inline completion also requires observable same-task
+`draft_sha256` from `draft.encode("utf-8")` without normalization and, before
+continuation or send, recomputes `executed_draft_sha256` from the exact bytes
+about to be executed or sent using the installed helper; an unavailable or
+mismatched hash blocks completion, and equality cannot be self-reported. Inline
+completion also requires observable same-task
 continuation and actual result, artifact, or test evidence that the approved
 prompt's success criteria are satisfied;
 continuation start alone is not completion. This behavior is a skill contract,
